@@ -326,6 +326,8 @@ div.kpi { cursor: default; }
 .cphint { display: block; flex-basis: 100%; font-size: 12.5px; color: var(--muted); line-height: 1.35; }
 .cphint.ok { color: var(--good); } .cphint.warn { color: var(--warn); } .cphint.bad { color: var(--bad); }
 .cphint .chip { padding: 2px 9px; font-size: 12.5px; margin: 3px 4px 0 0; }
+.cphint a { color: var(--accent); font-weight: 700; white-space: nowrap; }
+a.btn { text-decoration: none; color: inherit; }
 .ubadge { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); margin-left: 6px; font-weight: 700; white-space: nowrap; }
 .ubadge.cre { background: var(--warn-soft); color: var(--warn); }
 .ubadge.off { background: var(--bar); color: var(--muted); }
@@ -1625,7 +1627,9 @@ const PROV_CP = { '01': 'Álava', '02': 'Albacete', '03': 'Alicante', '04': 'Alm
   '41': 'Sevilla', '42': 'Soria', '43': 'Tarragona', '44': 'Teruel', '45': 'Toledo', '46': 'Valencia', '47': 'Valladolid', '48': 'Bizkaia', '49': 'Zamora', '50': 'Zaragoza', '51': 'Ceuta', '52': 'Melilla' };
 const provFromCP = cp => { const d = String(cp || '').replace(/\D/g, ''); return d.length >= 4 ? (PROV_CP[d.padStart(5, '0').slice(0, 2)] || '') : ''; };
 const CP_CACHE = {};
-const CP_AUTO = {};            // último valor puesto automáticamente en cada campo: lo que no coincida lo ha escrito el usuario
+const CP_AUTO = {};
+const CORREOS_CP = 'https://www.correos.es/es/es/herramientas/codigos-postales';
+const correosLink = () => ' <a href="' + CORREOS_CP + '" target="_blank" rel="noopener">Comprobar en Correos</a>';            // último valor puesto automáticamente en cada campo: lo que no coincida lo ha escrito el usuario
 // Busca las poblaciones de un código postal: lista de nombres, [] si no existe, o null si no hay conexión
 async function lookupCP(cp) {
   if (CP_CACHE[cp]) return CP_CACHE[cp];
@@ -1663,21 +1667,22 @@ async function cpAuto(prefix, raw) {
   const cp = String(raw || '').replace(/\D/g, '');
   if (cp.length !== 5) { cpHint(cpKey, cp.length ? 'El código postal tiene 5 cifras.' : '', ''); return; }
   const prov = PROV_CP[cp.slice(0, 2)];
-  if (!prov) { cpClearAuto(provKey); cpClearAuto(locKey); cpHint(cpKey, 'Ese código postal no es de ninguna provincia española: revísalo o escribe población y provincia a mano.', 'bad'); return; }
+  if (!prov) { cpClearAuto(provKey); cpClearAuto(locKey); cpHint(cpKey, 'Ese código postal no es de ninguna provincia española: revísalo o escribe población y provincia a mano.' + correosLink(), 'bad', true); return; }
   if (cpCanFill(provKey)) { cpSet(provKey, prov); CP_AUTO[provKey] = prov; }
+  if (!CFG.cpLookup) { cpHint(cpKey, 'Provincia: ' + esc(prov) + '. La búsqueda automática de la población está desactivada en Ajustes: escríbela a mano.' + correosLink(), '', true); return; }
   cpHint(cpKey, 'Buscando la población…', '');
   const places = await lookupCP(cp);
   if (String(cpGet(cpKey)).replace(/\D/g, '') !== cp) return;   // el usuario ya ha cambiado el código postal
   if (places === null || !places.length || places.length > 1) cpClearAuto(locKey);
-  if (places === null) { cpHint(cpKey, 'Provincia: ' + prov + '. No se ha podido consultar la población (sin conexión): escríbela a mano.', 'warn'); return; }
-  if (!places.length) { cpHint(cpKey, 'Provincia: ' + prov + '. No encuentro la población de ese código postal: escríbela a mano.', 'warn'); return; }
+  if (places === null) { cpHint(cpKey, 'Provincia: ' + esc(prov) + '. No se ha podido consultar la población (sin conexión): escríbela a mano.' + correosLink(), 'warn', true); return; }
+  if (!places.length) { cpHint(cpKey, 'Provincia: ' + esc(prov) + '. No encuentro la población de ese código postal: escríbela a mano.' + correosLink(), 'warn', true); return; }
   if (places.length === 1) {
     if (cpCanFill(locKey)) { cpSet(locKey, places[0]); CP_AUTO[locKey] = places[0]; cpHint(cpKey, '✓ ' + places[0] + ' (' + prov + '). Puedes cambiarla si no es correcta.', 'ok'); }
     else cpHint(cpKey, 'Este código postal es de ' + places[0] + ' (' + prov + '). Mantengo la población que has escrito.', 'warn');
     return;
   }
   cpHint(cpKey, 'Hay varias poblaciones con este código postal (' + esc(prov) + '). Elige una o escríbela a mano: ' +
-    places.slice(0, 8).map(p => '<button type="button" class="chip" data-act="cppick" data-k="' + esc(locKey) + '" data-c="' + esc(cpKey) + '" data-v="' + esc(p) + '">' + esc(p) + '</button>').join(''), 'warn', true);
+    places.slice(0, 8).map(p => '<button type="button" class="chip" data-act="cppick" data-k="' + esc(locKey) + '" data-c="' + esc(cpKey) + '" data-v="' + esc(p) + '">' + esc(p) + '</button>').join('') + correosLink(), 'warn', true);
 }
 
 // ---------- usuarios ----------
@@ -1943,6 +1948,14 @@ const H = {
   unew: () => openUser(null),
   uedit: v => openUser(v),
   usave: () => saveUser(),
+  cptest: async () => {
+    const out = document.getElementById('cptest-res'); if (out) out.textContent = 'Probando con el código postal 28001…';
+    delete CP_CACHE['28001'];
+    const r = await lookupCP('28001');
+    const msg = r === null ? 'Sin conexión con el servicio de códigos postales. La provincia se seguirá poniendo; la población, a mano.' : r.length ? '✓ Conexión correcta: 28001 es ' + r.join(', ') + '.' : 'El servicio responde, pero no ha devuelto datos.';
+    if (out) { out.textContent = msg; out.style.color = r && r.length ? 'var(--good)' : 'var(--bad)'; }
+    toast(msg, !(r && r.length));
+  },
   cppick: (v, el) => { cpSet(el.dataset.k, v); CP_AUTO[el.dataset.k] = v; cpHint(el.dataset.c, '✓ Población: ' + v + '. Puedes cambiarla si no es correcta.', 'ok'); },
   askmic: () => askMic(),
   micperm: () => { refreshMicPerm(); toast('Permiso comprobado'); },
@@ -2008,7 +2021,7 @@ document.addEventListener('input', e => {
   if (k.startsWith('e.') && S.edit) { S.edit.d[k.slice(2)] = val; if (k === 'e.cp') cpAuto('e.', val); return; }
   if (k === 'u.me') { S.me = val; S.verDe = 'todos'; S.edit = null; S.sheet = null; if ((!isJefe() && S.view === 'equipo') || (!canAdmin() && S.view === 'usuarios') || S.view === 'ficha') { S.view = 'hoy'; S.prev = 'hoy'; } toast('Has entrado como ' + me().nombre + ' (' + roleLabel(me()) + ')'); render(); return; }
   if (k === 'u.verDe') { S.verDe = val; render(); return; }
-  if (k.startsWith('g.')) { CFG[k.slice(2)] = val; saveCfg(); if (k === 'g.mic' && !val) { micBtn.hidden = true; micTip.hidden = true; } toast(k === 'g.mic' ? (val ? 'Botón de micrófono activado' : 'Botón de micrófono oculto') : 'Idioma del dictado: ' + (LANGS.find(l => l[0] === val) || ['', val])[1]); return; }
+  if (k.startsWith('g.')) { CFG[k.slice(2)] = val; saveCfg(); if (k === 'g.mic' && !val) { micBtn.hidden = true; micTip.hidden = true; } toast(k === 'g.cpLookup' ? (val ? 'Búsqueda de población activada' : 'Búsqueda de población desactivada: solo se pondrá la provincia') : k === 'g.mic' ? (val ? 'Botón de micrófono activado' : 'Botón de micrófono oculto') : 'Idioma del dictado: ' + (LANGS.find(l => l[0] === val) || ['', val])[1]); return; }
   if (k === 'p.paste') { S.imp.paste = val; return; }
   if (k.startsWith('m.')) { S.imp.map[+k.slice(2)] = val; render(); return; }
   if (k.startsWith('x.')) { S.exp[k.slice(2)] = val; render(); return; }
@@ -2076,7 +2089,7 @@ const MIC_HELP = 'En Windows también puedes pulsar Win + H para dictar en cualq
 let micField = null, micRec = null, micOn = false, micLast = '';
 
 // ---------- ajustes (preferencias de este navegador) ----------
-const CFG = { lang: 'es-ES', mic: true };
+const CFG = { lang: 'es-ES', mic: true, cpLookup: true };
 try { Object.assign(CFG, JSON.parse(localStorage.getItem('alfacrm-ajustes') || '{}')); } catch (e) { /* sin almacenamiento: valores por defecto */ }
 const saveCfg = () => { try { localStorage.setItem('alfacrm-ajustes', JSON.stringify(CFG)); } catch (e) { /* no se guarda entre sesiones */ } };
 const EMBEDDED = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
@@ -2121,6 +2134,11 @@ function vAjustes() {
   h += '<div class="panel stack"><h3 class="sec">Tus datos</h3><p style="margin:0">' + (STORE_OK ? 'Todo lo que haces se guarda automáticamente <b>en este navegador</b>' + (LAST_SAVE ? ' (último guardado: ' + esc(when(LAST_SAVE)) + ')' : '') + '.' : '<b style="color:var(--bad)">Este navegador no permite guardar</b>: lo que hagas se perderá al cerrar. Descarga una copia antes de salir.') + '</p>' +
     '<ul class="tips"><li>Solo lo ves tú, en este dispositivo y este navegador: no se comparte con el equipo.</li><li>Si borras los datos de navegación o usas una ventana de incógnito, se pierde. Descarga una copia de vez en cuando.</li><li>No metas clientes reales en esta demostración. En la aplicación definitiva los datos se guardarán en un servidor y los verá el equipo según su rol.</li></ul>' +
     '<div class="chips"><button class="btn pri" data-act="xcopia" type="button">' + ic('download', 18) + 'Descargar copia de mis datos</button><button class="btn" data-act="dtab" data-v="imp" type="button">Restaurar una copia</button><button class="btn danger" data-act="reset" type="button">Borrar mis datos</button></div></div>';
+  h += '<div class="panel stack"><h3 class="sec">Códigos postales</h3>' +
+    '<label class="sw" for="g-cp">Buscar la población automáticamente al escribir el código postal<input type="checkbox" id="g-cp" data-in="g.cpLookup"' + (CFG.cpLookup ? ' checked' : '') + '></label>' +
+    '<p class="meta" style="margin:0">La provincia se pone siempre, sin conexión. La población se consulta en el servicio público <b>zippopotam.us</b>: solo se envía el código postal, ningún dato del cliente. Si no la encuentra, puedes escribirla a mano o comprobarla en Correos.</p>' +
+    '<div class="chips"><button class="btn" data-act="cptest" type="button">Probar conexión</button><a class="btn" href="' + CORREOS_CP + '" target="_blank" rel="noopener">Buscador oficial de Correos</a></div>' +
+    '<p class="meta" id="cptest-res" style="margin:0" role="status"></p></div>';
   h += '<div class="panel stack"><h3 class="sec">Micrófono</h3>' +
     '<div class="toolbar"><span class="sla ' + est[0] + '" style="font-size:13px">' + est[1] + '</span><span>' + esc(est[2]) + '</span></div>' +
     (micBlockReason() ? '<div class="alert">' + ic('alert') + '<div class="tx"><b>Aquí el dictado del navegador no puede funcionar</b><span>' + esc(micBlockReason()) + '</span><span>Para dictar ahora mismo: pon el cursor en un campo y pulsa <b>Win + H</b> (Windows) o usa el micrófono del teclado del móvil. Para el botón de micrófono de Alfa CRM hace falta abrirlo desde una dirección web <b>https://</b>.</span></div></div>' : '') +
