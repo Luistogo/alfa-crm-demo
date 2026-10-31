@@ -1629,6 +1629,7 @@ const provFromCP = cp => { const d = String(cp || '').replace(/\D/g, ''); return
 const CP_CACHE = {};
 const CP_AUTO = {};
 const CORREOS_CP = 'https://www.correos.es/es/es/herramientas/codigos-postales';
+let CP_TEST = { msg: '', ok: true };
 const correosLink = () => ' <a href="' + CORREOS_CP + '" target="_blank" rel="noopener">Comprobar en Correos</a>';            // último valor puesto automáticamente en cada campo: lo que no coincida lo ha escrito el usuario
 // Busca las poblaciones de un código postal: lista de nombres, [] si no existe, o null si no hay conexión
 async function lookupCP(cp) {
@@ -1949,11 +1950,14 @@ const H = {
   uedit: v => openUser(v),
   usave: () => saveUser(),
   cptest: async () => {
-    const out = document.getElementById('cptest-res'); if (out) out.textContent = 'Probando con el código postal 28001…';
+    CP_TEST = { msg: 'Probando con el código postal 28001…', ok: true };
+    let out = document.getElementById('cptest-res'); if (out) out.textContent = CP_TEST.msg;
     delete CP_CACHE['28001'];
     const r = await lookupCP('28001');
     const msg = r === null ? 'Sin conexión con el servicio de códigos postales. La provincia se seguirá poniendo; la población, a mano.' : r.length ? '✓ Conexión correcta: 28001 es ' + r.join(', ') + '.' : 'El servicio responde, pero no ha devuelto datos.';
-    if (out) { out.textContent = msg; out.style.color = r && r.length ? 'var(--good)' : 'var(--bad)'; }
+    CP_TEST = { msg, ok: !!(r && r.length) };
+    out = document.getElementById('cptest-res');
+    if (out) { out.textContent = msg; out.style.color = CP_TEST.ok ? 'var(--good)' : 'var(--bad)'; }
     toast(msg, !(r && r.length));
   },
   cppick: (v, el) => { cpSet(el.dataset.k, v); CP_AUTO[el.dataset.k] = v; cpHint(el.dataset.c, '✓ Población: ' + v + '. Puedes cambiarla si no es correcta.', 'ok'); },
@@ -2138,7 +2142,7 @@ function vAjustes() {
     '<label class="sw" for="g-cp">Buscar la población automáticamente al escribir el código postal<input type="checkbox" id="g-cp" data-in="g.cpLookup"' + (CFG.cpLookup ? ' checked' : '') + '></label>' +
     '<p class="meta" style="margin:0">La provincia se pone siempre, sin conexión. La población se consulta en el servicio público <b>zippopotam.us</b>: solo se envía el código postal, ningún dato del cliente. Si no la encuentra, puedes escribirla a mano o comprobarla en Correos.</p>' +
     '<div class="chips"><button class="btn" data-act="cptest" type="button">Probar conexión</button><a class="btn" href="' + CORREOS_CP + '" target="_blank" rel="noopener">Buscador oficial de Correos</a></div>' +
-    '<p class="meta" id="cptest-res" style="margin:0" role="status"></p></div>';
+    '<p class="meta" id="cptest-res" style="margin:0;' + (CP_TEST.msg ? 'color:var(--' + (CP_TEST.ok ? 'good' : 'bad') + ')' : '') + '" role="status">' + esc(CP_TEST.msg) + '</p></div>';
   h += '<div class="panel stack"><h3 class="sec">Micrófono</h3>' +
     '<div class="toolbar"><span class="sla ' + est[0] + '" style="font-size:13px">' + est[1] + '</span><span>' + esc(est[2]) + '</span></div>' +
     (micBlockReason() ? '<div class="alert">' + ic('alert') + '<div class="tx"><b>Aquí el dictado del navegador no puede funcionar</b><span>' + esc(micBlockReason()) + '</span><span>Para dictar ahora mismo: pon el cursor en un campo y pulsa <b>Win + H</b> (Windows) o usa el micrófono del teclado del móvil. Para el botón de micrófono de Alfa CRM hace falta abrirlo desde una dirección web <b>https://</b>.</span></div></div>' : '') +
