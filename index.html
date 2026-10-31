@@ -323,6 +323,9 @@ div.kpi { cursor: default; }
 .panel details .tips { margin-top: 6px; }
 .panel textarea#cfg-test { font-family: var(--f-body); font-size: 15px; }
 .micfield { padding-right: 46px !important; }
+.cphint { display: block; flex-basis: 100%; font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.cphint.ok { color: var(--good); } .cphint.warn { color: var(--warn); } .cphint.bad { color: var(--bad); }
+.cphint .chip { padding: 2px 9px; font-size: 12.5px; margin: 3px 4px 0 0; }
 .ubadge { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); margin-left: 6px; font-weight: 700; white-space: nowrap; }
 .ubadge.cre { background: var(--warn-soft); color: var(--warn); }
 .ubadge.off { background: var(--bar); color: var(--muted); }
@@ -1366,7 +1369,7 @@ function buildRecords() {
     let trat = ''; if (r.trat) trat = /^(sra|señora|dña|doña|mrs|ms)/i.test(r.trat.trim()) ? 'Sra.' : /^(sr|señor|d\.?|don|mr)/i.test(r.trat.trim()) ? 'Sr.' : '';
     const nacimiento = parseDate(r.nacimiento); if (r.nacimiento && !nacimiento) warns.push('Fecha de nacimiento no reconocida: ' + r.nacimiento);
     let dirs = [];
-    if (r.dir) { let txt = fixCase(r.dir), via = 'Calle'; const fv = VIAS.find(v => new RegExp('^(' + v + '|' + v.slice(0, 2) + '\\.?|c/)\\s', 'i').test(txt)); if (fv) { via = fv; txt = txt.replace(/^\S+\s/, ''); } else if (/^c\/\s?/i.test(txt)) txt = txt.replace(/^c\/\s?/i, ''); dirs.push({ via, nombre: txt, num: r.num || '', piso: r.piso || '', cp: String(r.cp || '').padStart(r.cp && String(r.cp).length === 4 ? 5 : 0, '0'), loc: fixCase(r.loc), prov: fixCase(r.prov), pais: fixCase(r.pais) || 'España', principal: true }); }
+    if (r.dir) { let txt = fixCase(r.dir), via = 'Calle'; const fv = VIAS.find(v => new RegExp('^(' + v + '|' + v.slice(0, 2) + '\\.?|c/)\\s', 'i').test(txt)); if (fv) { via = fv; txt = txt.replace(/^\S+\s/, ''); } else if (/^c\/\s?/i.test(txt)) txt = txt.replace(/^c\/\s?/i, ''); dirs.push({ via, nombre: txt, num: r.num || '', piso: r.piso || '', cp: String(r.cp || '').padStart(r.cp && String(r.cp).length === 4 ? 5 : 0, '0'), loc: fixCase(r.loc), prov: fixCase(r.prov) || provFromCP(r.cp), pais: fixCase(r.pais) || 'España', principal: true }); }
     const estado = mapEstado(r.estado) || o.estado; if (r.estado && !mapEstado(r.estado)) warns.push('Estado "' + r.estado + '" no reconocido: se usa ' + o.estado);
     const rg = r.rgpd === undefined ? RGPD[3] : yes(r.rgpd) ? RGPD[0] : no(r.rgpd) ? RGPD[1] : RGPD[3];
     const rec = { line, errors, warns, tipo, trat, nombre, medios, dni: dn ? dn.v : '', nacimiento, dirs, estado, rgpd: rg,
@@ -1612,6 +1615,66 @@ function teamExport(fmt) {
   if (fmt === 'csv') saveFile(name + '.csv', toCsv(rows), 'text/csv');
   else if (typeof XLSX === 'undefined') toast('No se ha podido cargar Excel: exporta en CSV');
   else saveFile(name + '.xlsx', toXlsx(rows, 'Equipo'), '');
+}
+
+// ---------- código postal → provincia y población ----------
+const PROV_CP = { '01': 'Álava', '02': 'Albacete', '03': 'Alicante', '04': 'Almería', '05': 'Ávila', '06': 'Badajoz', '07': 'Illes Balears', '08': 'Barcelona', '09': 'Burgos', '10': 'Cáceres',
+  '11': 'Cádiz', '12': 'Castellón', '13': 'Ciudad Real', '14': 'Córdoba', '15': 'A Coruña', '16': 'Cuenca', '17': 'Girona', '18': 'Granada', '19': 'Guadalajara', '20': 'Gipuzkoa',
+  '21': 'Huelva', '22': 'Huesca', '23': 'Jaén', '24': 'León', '25': 'Lleida', '26': 'La Rioja', '27': 'Lugo', '28': 'Madrid', '29': 'Málaga', '30': 'Murcia',
+  '31': 'Navarra', '32': 'Ourense', '33': 'Asturias', '34': 'Palencia', '35': 'Las Palmas', '36': 'Pontevedra', '37': 'Salamanca', '38': 'Santa Cruz de Tenerife', '39': 'Cantabria', '40': 'Segovia',
+  '41': 'Sevilla', '42': 'Soria', '43': 'Tarragona', '44': 'Teruel', '45': 'Toledo', '46': 'Valencia', '47': 'Valladolid', '48': 'Bizkaia', '49': 'Zamora', '50': 'Zaragoza', '51': 'Ceuta', '52': 'Melilla' };
+const provFromCP = cp => { const d = String(cp || '').replace(/\D/g, ''); return d.length >= 4 ? (PROV_CP[d.padStart(5, '0').slice(0, 2)] || '') : ''; };
+const CP_CACHE = {};
+const CP_AUTO = {};            // último valor puesto automáticamente en cada campo: lo que no coincida lo ha escrito el usuario
+// Busca las poblaciones de un código postal: lista de nombres, [] si no existe, o null si no hay conexión
+async function lookupCP(cp) {
+  if (CP_CACHE[cp]) return CP_CACHE[cp];
+  if (typeof fetch !== 'function') return null;
+  const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), 5000) : null;
+  try {
+    const r = await fetch('https://api.zippopotam.us/es/' + cp, ctl ? { signal: ctl.signal } : {});
+    if (r.status === 404) return (CP_CACHE[cp] = []);
+    if (!r.ok) return null;
+    const o = await r.json();
+    const names = [...new Set((o.places || []).map(p => fixCase(String(p['place name'] || '').trim())).filter(Boolean))];
+    return (CP_CACHE[cp] = names);
+  } catch (e) { return null; } finally { if (timer) clearTimeout(timer); }
+}
+const cpField = key => document.querySelector('[data-in="' + key + '"]');
+const cpGet = key => key.startsWith('e.') ? ((S.edit && S.edit.d[key.slice(2)]) || '') : (key.slice(2).split('.').reduce((o, p) => (o || {})[p], S.nuevo) || '');
+function cpSet(key, val) {
+  if (key.startsWith('e.')) { if (S.edit) S.edit.d[key.slice(2)] = val; } else setPath(S.nuevo, key.slice(2), val);
+  const el = cpField(key); if (el) el.value = val;
+}
+const cpCanFill = key => { const v = cpGet(key); return !v || v === CP_AUTO[key]; };
+function cpHint(cpKey, html, kind, isHtml) {
+  const inp = cpField(cpKey); if (!inp || !inp.parentNode) return;
+  const id = 'cphint-' + cpKey.replace(/\W/g, '-');
+  let h = document.getElementById(id);
+  if (!h) { h = document.createElement('span'); h.id = id; h.setAttribute('role', 'status'); const fld = inp.closest ? inp.closest('.fld') : null; if (fld) fld.appendChild(h); else inp.insertAdjacentElement('afterend', h); }
+  h.className = 'cphint' + (kind ? ' ' + kind : '');
+  if (isHtml) h.innerHTML = html; else h.textContent = html;
+}
+async function cpAuto(prefix, raw) {
+  const cpKey = prefix + 'cp', locKey = prefix + 'loc', provKey = prefix + 'prov';
+  const cp = String(raw || '').replace(/\D/g, '');
+  if (cp.length !== 5) { cpHint(cpKey, cp.length ? 'El código postal tiene 5 cifras.' : '', ''); return; }
+  const prov = PROV_CP[cp.slice(0, 2)];
+  if (!prov) { cpHint(cpKey, 'Ese código postal no es de ninguna provincia española: revísalo o escribe población y provincia a mano.', 'bad'); return; }
+  if (cpCanFill(provKey)) { cpSet(provKey, prov); CP_AUTO[provKey] = prov; }
+  cpHint(cpKey, 'Buscando la población…', '');
+  const places = await lookupCP(cp);
+  if (String(cpGet(cpKey)).replace(/\D/g, '') !== cp) return;   // el usuario ya ha cambiado el código postal
+  if (places === null) { cpHint(cpKey, 'Provincia: ' + prov + '. No se ha podido consultar la población (sin conexión): escríbela a mano.', 'warn'); return; }
+  if (!places.length) { cpHint(cpKey, 'Provincia: ' + prov + '. No encuentro la población de ese código postal: escríbela a mano.', 'warn'); return; }
+  if (places.length === 1) {
+    if (cpCanFill(locKey)) { cpSet(locKey, places[0]); CP_AUTO[locKey] = places[0]; cpHint(cpKey, '✓ ' + places[0] + ' (' + prov + '). Puedes cambiarla si no es correcta.', 'ok'); }
+    else cpHint(cpKey, 'Este código postal es de ' + places[0] + ' (' + prov + '). Mantengo la población que has escrito.', 'warn');
+    return;
+  }
+  cpHint(cpKey, 'Hay varias poblaciones con este código postal (' + esc(prov) + '). Elige una o escríbela a mano: ' +
+    places.slice(0, 8).map(p => '<button type="button" class="chip" data-act="cppick" data-k="' + esc(locKey) + '" data-c="' + esc(cpKey) + '" data-v="' + esc(p) + '">' + esc(p) + '</button>').join(''), 'warn', true);
 }
 
 // ---------- usuarios ----------
@@ -1877,6 +1940,7 @@ const H = {
   unew: () => openUser(null),
   uedit: v => openUser(v),
   usave: () => saveUser(),
+  cppick: (v, el) => { cpSet(el.dataset.k, v); CP_AUTO[el.dataset.k] = v; cpHint(el.dataset.c, '✓ Población: ' + v + '. Puedes cambiarla si no es correcta.', 'ok'); },
   askmic: () => askMic(),
   micperm: () => { refreshMicPerm(); toast('Permiso comprobado'); },
   newcita: v => { const p = (v || '').split('|'); openCita(p[0] ? { date: p[0], time: p[1] || '10:00' } : null); },
@@ -1938,7 +2002,7 @@ document.addEventListener('input', e => {
   const k = e.target.dataset.in; if (!k) return;
   const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
   if (k === 'q') { S.q = val; const l = $('clist'); if (l) l.innerHTML = clistHtml(); return; }
-  if (k.startsWith('e.') && S.edit) { S.edit.d[k.slice(2)] = val; return; }
+  if (k.startsWith('e.') && S.edit) { S.edit.d[k.slice(2)] = val; if (k === 'e.cp') cpAuto('e.', val); return; }
   if (k === 'u.me') { S.me = val; S.verDe = 'todos'; S.edit = null; S.sheet = null; if ((!isJefe() && S.view === 'equipo') || (!canAdmin() && S.view === 'usuarios') || S.view === 'ficha') { S.view = 'hoy'; S.prev = 'hoy'; } toast('Has entrado como ' + me().nombre + ' (' + roleLabel(me()) + ')'); render(); return; }
   if (k === 'u.verDe') { S.verDe = val; render(); return; }
   if (k.startsWith('g.')) { CFG[k.slice(2)] = val; saveCfg(); if (k === 'g.mic' && !val) { micBtn.hidden = true; micTip.hidden = true; } toast(k === 'g.mic' ? (val ? 'Botón de micrófono activado' : 'Botón de micrófono oculto') : 'Idioma del dictado: ' + (LANGS.find(l => l[0] === val) || ['', val])[1]); return; }
@@ -1957,6 +2021,7 @@ document.addEventListener('input', e => {
   if (k === 'r.rgpd') { const c = client(S.cid); logChange(c, 'Tratamiento de datos', c.rgpd, val); c.rgpd = val; render(); return; }
   if (k.startsWith('n.')) {
     const path = k.slice(2); setPath(S.nuevo, path, val);
+    if (/^dirs\.\d+\.cp$/.test(path)) cpAuto('n.' + path.replace(/cp$/, ''), val);
     if (path === 'rgpd' || /^medios\.\d+\.tipo$/.test(path)) { render(); return; }
     if (path === 'nacimiento') { const a = yearsSince(val), el = $('n-age'); if (el) el.textContent = a != null ? '(' + a + ' años)' : ''; }
     dupCheck(); return;
