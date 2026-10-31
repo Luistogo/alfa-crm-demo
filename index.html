@@ -1648,6 +1648,8 @@ function cpSet(key, val) {
   const el = cpField(key); if (el) el.value = val;
 }
 const cpCanFill = key => { const v = cpGet(key); return !v || v === CP_AUTO[key]; };
+// Quita un valor puesto automáticamente para otro código postal; lo escrito por el usuario no se toca
+const cpClearAuto = key => { const v = cpGet(key); if (v && v === CP_AUTO[key]) { cpSet(key, ''); CP_AUTO[key] = ''; } };
 function cpHint(cpKey, html, kind, isHtml) {
   const inp = cpField(cpKey); if (!inp || !inp.parentNode) return;
   const id = 'cphint-' + cpKey.replace(/\W/g, '-');
@@ -1661,11 +1663,12 @@ async function cpAuto(prefix, raw) {
   const cp = String(raw || '').replace(/\D/g, '');
   if (cp.length !== 5) { cpHint(cpKey, cp.length ? 'El código postal tiene 5 cifras.' : '', ''); return; }
   const prov = PROV_CP[cp.slice(0, 2)];
-  if (!prov) { cpHint(cpKey, 'Ese código postal no es de ninguna provincia española: revísalo o escribe población y provincia a mano.', 'bad'); return; }
+  if (!prov) { cpClearAuto(provKey); cpClearAuto(locKey); cpHint(cpKey, 'Ese código postal no es de ninguna provincia española: revísalo o escribe población y provincia a mano.', 'bad'); return; }
   if (cpCanFill(provKey)) { cpSet(provKey, prov); CP_AUTO[provKey] = prov; }
   cpHint(cpKey, 'Buscando la población…', '');
   const places = await lookupCP(cp);
   if (String(cpGet(cpKey)).replace(/\D/g, '') !== cp) return;   // el usuario ya ha cambiado el código postal
+  if (places === null || !places.length || places.length > 1) cpClearAuto(locKey);
   if (places === null) { cpHint(cpKey, 'Provincia: ' + prov + '. No se ha podido consultar la población (sin conexión): escríbela a mano.', 'warn'); return; }
   if (!places.length) { cpHint(cpKey, 'Provincia: ' + prov + '. No encuentro la población de ese código postal: escríbela a mano.', 'warn'); return; }
   if (places.length === 1) {
