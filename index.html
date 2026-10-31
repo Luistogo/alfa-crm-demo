@@ -323,6 +323,11 @@ div.kpi { cursor: default; }
 .panel details .tips { margin-top: 6px; }
 .panel textarea#cfg-test { font-family: var(--f-body); font-size: 15px; }
 .micfield { padding-right: 46px !important; }
+.ubadge { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); margin-left: 6px; font-weight: 700; white-space: nowrap; }
+.ubadge.cre { background: var(--warn-soft); color: var(--warn); }
+.ubadge.off { background: var(--bar); color: var(--muted); }
+.tbl td.si { color: var(--good); font-weight: 700; } .tbl td.nn { color: var(--muted); }
+.tbl tr.inactivo td { opacity: .55; }
 .savedind { font-size: 12.5px; color: var(--good); white-space: nowrap; }
 .savedind.bad { color: var(--bad); font-weight: 700; }
 @media (max-width: 820px) { .savedind { display: none; } }
@@ -410,7 +415,7 @@ div.kpi { cursor: default; }
       <li>En <b>Nuevo cliente</b>, usa el teléfono <span class="phone-num">600 000 103</span> y mira el aviso de duplicado.</li>
       <li>En <b>Importar / exportar</b>, descarga la plantilla o arrastra un Excel, CSV, JSON o vCard: revisa cómo se asignan las columnas, los duplicados y los errores antes de importar. Exporta después en Excel, CSV o JSON.</li>
       <li>En <b>Leads</b>, atiende el que más tiempo lleva esperando.</li>
-      <li>Arriba, en <b>Ver como</b>, cambia a <b>Jefe de ventas</b>: verás a todo el equipo, la pestaña <b>Equipo e informes</b> con los datos de cada comercial, y podrás filtrar por comercial y exportar el informe en Excel.</li>
+      <li>Arriba, en <b>Entrar como</b>, elige un usuario para ver lo que ve: un comercial ve su cartera; un jefe de ventas o un gerente ve a todo el equipo y <b>Equipo e informes</b>. Como creador o administrador tienes la pestaña <b>Usuarios</b> para dar de alta y gestionar niveles.</li>
       <li>En <b>Agenda</b>, pulsa <b>Nueva cita</b> o una hora libre. Elige un cliente con el buscador, apunta a alguien a mano o crea una reunión sin cliente.</li>
     </ol>
     <p class="meta">Preguntas para el equipo: ¿reportar es más rápido que en la herramienta actual? ¿Falta algún dato en la ficha? ¿Lo usaríais también desde el móvil?</p>
@@ -454,6 +459,7 @@ const IC = {
   upload: '<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>',
   download: '<path d="M12 4v12M7 11l5 5 5-5M4 20h16"/>',
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
   mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'
 };
@@ -513,7 +519,20 @@ const PROF = ['Asalariado/a', 'Autónomo/a', 'Funcionario/a', 'Directivo/a', 'Em
 const RGPD = ['Sí acepta el tratamiento de datos', 'No acepta el tratamiento de datos', 'Ejerce el derecho al olvido', 'Pendiente de confirmar'];
 const CANALES_RGPD = [['email', 'Email'], ['sms', 'SMS'], ['postal', 'Correo postal'], ['tel', 'Teléfono'], ['wa', 'WhatsApp']];
 const SEDES = ['Exposición Centro', 'Exposición Norte'];
-const OWNERS = ['Comercial de prueba (tú)', 'Comercial B (ficticio)', 'Comercial C (ficticio)'];
+// Usuarios: nivel (comercial, jefe de ventas o gerente), permiso de administrador y un único creador
+const ROLES = { comercial: 'Comercial', jefe: 'Jefe de ventas', gerente: 'Gerente' };
+const LEGACY_OWNERS = { 'Comercial de prueba (tú)': 'u1', 'Comercial B (ficticio)': 'u2', 'Comercial C (ficticio)': 'u3' };
+function seedUsers() {
+  const u = (id, nombre, email, rol, admin, creador) => ({ id, nombre, email, rol, admin: !!admin, creador: !!creador, activo: true, sede: SEDES[0] });
+  return [
+    u('u0', 'Creador (tú)', 'creador@ejemplo.com', 'gerente', true, true),
+    u('u1', 'Comercial A (ficticio)', 'comercial.a@ejemplo.com', 'comercial'),
+    u('u2', 'Comercial B (ficticio)', 'comercial.b@ejemplo.com', 'comercial'),
+    u('u3', 'Comercial C (ficticio)', 'comercial.c@ejemplo.com', 'comercial'),
+    u('u4', 'Jefa de ventas (ficticia)', 'jefa.ventas@ejemplo.com', 'jefe'),
+    u('u5', 'Gerente (ficticio)', 'gerente@ejemplo.com', 'gerente', true)
+  ];
+}
 const isTel = t => !/^Email/.test(t);
 
 // ---------- fechas ----------
@@ -554,7 +573,7 @@ function mkClient(o) {
     dirs: [], origenes: [], dni: '', nac: 'Español', nacimiento: '', carnet: '', civil: '', prof: '',
     rgpd: RGPD[0], canales: { email: true, sms: true, postal: true, tel: true, wa: true }, publi: true, firma: { f: D(-30, 12, 14), id: hex() },
     empresa: [], flota: [], usados: [], perfil: [], cuest: [],
-    owner: OWNERS[0], ownerDesde: D(-40, 10), sede: SEDES[0], modelo: 'Sin decidir', alta: D(-40, 10), motivo: '', hist: []
+    owner: 'u1', ownerDesde: D(-40, 10), sede: SEDES[0], modelo: 'Sin decidir', alta: D(-40, 10), motivo: '', hist: []
   }, o);
 }
 function seed() {
@@ -570,26 +589,26 @@ function seed() {
       hist: [h(-2, 18, 'visita', 'Visita exposición · Contactado · Presentación del vehículo — Vuelve el sábado acompañado')] }),
     mkClient({ n: 3, trat: 'Sra.', nombre: 'Celia Vázquez Toledo', estado: 'PRE', modelo: 'Ariya', dni: '00000002W', origenes: [org('Evento', 'Feria del eléctrico 2026', 'Prueba de vehículo', -9)],
       hist: [h(-9, 13, 'sys', 'Alta desde evento: Feria del eléctrico 2026', 'Sistema'), h(-8, 10, 'email', 'Email · Oferta Ariya enviada')] }),
-    mkClient({ n: 4, owner: OWNERS[1], tipo: 'Empresa', nombre: 'Logística Meridiano SL', estado: 'CAL', modelo: 'Townstar', dni: 'B00000004', origenes: [org('Teléfono', 'Sin campaña', 'Oferta VN', -5)], dirs: [dir('Carretera', 'del Polígono', 'km 2', 'Nave 7', 'Prado Ficticio')],
+    mkClient({ n: 4, owner: 'u2', tipo: 'Empresa', nombre: 'Logística Meridiano SL', estado: 'CAL', modelo: 'Townstar', dni: 'B00000004', origenes: [org('Teléfono', 'Sin campaña', 'Oferta VN', -5)], dirs: [dir('Carretera', 'del Polígono', 'km 2', 'Nave 7', 'Prado Ficticio')],
       empresa: ['Persona de contacto: responsable de flota (ficticio)'], flota: ['3 furgonetas de otra marca, renovación prevista en 2027'],
       medios: [{ tipo: 'Teléfono trabajo', valor: '600 000 104', principal: true, franja: 'Mañanas (9 a 14)' }, { tipo: 'Email trabajo', valor: 'flota@empresa-ejemplo.com', principal: true, franja: 'Cualquier hora' }],
       hist: [h(-5, 9, 'llamada', 'Llamada · Contactado · Forma de pago — 3 furgonetas, renting a 48 meses'), h(-1, 16, 'email', 'Email · Propuesta de flota enviada')] }),
     mkClient({ n: 5, trat: 'Sr.', nombre: 'Darío Esteve Montoro', estado: 'CAR', modelo: 'X-Trail', origenes: [org('Referido', 'Sin campaña', 'Oferta VN', -20)], flota: ['X-Trail en pedido, pendiente de entrega'],
       hist: [h(-15, 12, 'sys', 'Pedido emitido', 'Sistema'), h(-2, 11, 'sys', 'Vehículo recibido en el concesionario', 'Sistema')] }),
-    mkClient({ n: 6, owner: OWNERS[2], trat: 'Sra.', nombre: 'Eva Cordero Lamas', estado: 'SE1', modelo: 'Micra', origenes: [org('Web', 'Sin campaña', 'Oferta VN', -12)], publi: false,
+    mkClient({ n: 6, owner: 'u3', trat: 'Sra.', nombre: 'Eva Cordero Lamas', estado: 'SE1', modelo: 'Micra', origenes: [org('Web', 'Sin campaña', 'Oferta VN', -12)], publi: false,
       hist: [h(-12, 10, 'email', 'Email · Oferta Micra enviada'), h(-7, 12, 'llamada', 'Llamada · No contesta')] }),
     mkClient({ n: 7, trat: 'Sr.', nombre: 'Fabián Robles Arenas', estado: 'PRE', modelo: 'Leaf', origenes: [org('Redes sociales', 'Feria del eléctrico 2026', 'Prueba de vehículo', -4)], firma: null,
       hist: [h(-4, 19, 'sys', 'Lead recibido: prueba Leaf (Redes sociales)', 'Sistema')] }),
     mkClient({ n: 8, trat: 'Sra.', nombre: 'Gema Torrado Sierra', estado: 'PRO', origenes: [org('Taller', 'Sin campaña', 'Información', -20)], usados: ['Coche actual de 11 años, pasa revisiones en nuestro taller'],
       hist: [h(-20, 9, 'sys', 'Alta desde taller: su coche tiene 11 años', 'Sistema')] }),
-    mkClient({ n: 9, owner: OWNERS[1], tipo: 'Empresa', nombre: 'Talleres Horizonte SL', estado: 'SE2', modelo: 'Townstar', origenes: [org('Web', 'Sin campaña', 'Oferta VN', -30)],
+    mkClient({ n: 9, owner: 'u2', tipo: 'Empresa', nombre: 'Talleres Horizonte SL', estado: 'SE2', modelo: 'Townstar', origenes: [org('Web', 'Sin campaña', 'Oferta VN', -30)],
       medios: [{ tipo: 'Teléfono trabajo', valor: '600 000 109', principal: true, franja: 'Cualquier hora' }],
       hist: [h(-30, 10, 'email', 'Email · Oferta de 2 unidades enviada'), h(-14, 11, 'llamada', 'Llamada · Contactado · Aplaza a enero')] }),
-    mkClient({ n: 10, owner: OWNERS[2], trat: 'Sr.', nombre: 'Hugo Barrera Olmos', estado: 'NOC', modelo: 'Qashqai', motivo: 'Precio', origenes: [org('Web', 'Sin campaña', 'Oferta VN', -40)],
+    mkClient({ n: 10, owner: 'u3', trat: 'Sr.', nombre: 'Hugo Barrera Olmos', estado: 'NOC', modelo: 'Qashqai', motivo: 'Precio', origenes: [org('Web', 'Sin campaña', 'Oferta VN', -40)],
       hist: [h(-25, 12, 'sys', 'Estado: Caliente → No compra · Motivo: Precio', 'Sistema')] }),
     mkClient({ n: 11, trat: 'Sra.', nombre: 'Inés Calatrava Peral', estado: 'EXCL', modelo: 'Juke', origenes: [org('Exposición', 'Sin campaña', 'Oferta VN', -220)], flota: ['Juke híbrido comprado en el concesionario'], cuest: ['Encuesta de entrega: muy satisfecha'],
       hist: [h(-200, 12, 'entrega', 'Entrega realizada · Juke híbrido')] }),
-    mkClient({ n: 12, owner: OWNERS[2], trat: 'Sr.', nombre: 'Jorge Valcárcel Rey', estado: 'CAL', modelo: 'X-Trail', origenes: [org('Teléfono', 'Sin campaña', 'Tasación', -3)], usados: ['Coche actual pendiente de tasación'],
+    mkClient({ n: 12, owner: 'u3', trat: 'Sr.', nombre: 'Jorge Valcárcel Rey', estado: 'CAL', modelo: 'X-Trail', origenes: [org('Teléfono', 'Sin campaña', 'Tasación', -3)], usados: ['Coche actual pendiente de tasación'],
       hist: [h(-1, 13, 'llamada', 'Llamada · Contactado · Propuesta de cierre — Espera la tasación de su coche actual')] })
   ];
   const it = (cid, tipo, f, nota) => ({ id: nid('i'), cid, tipo, f, nota: nota || '', done: false });
@@ -615,7 +634,7 @@ function seed() {
     { id: 'l4', nombre: 'Celia Vázquez Toledo', tel: '600 000 103', canal: 'Web', campana: 'Feria del eléctrico 2026', peticion: 'Oferta VN', modelo: 'Ariya', rec: ago(60 * 26), estado: 'nuevo', cid: null },
     { id: 'l5', nombre: 'Fabián Robles Arenas', tel: '600 000 107', canal: 'Redes sociales', campana: 'Feria del eléctrico 2026', peticion: 'Prueba de vehículo', modelo: 'Leaf', rec: ago(60 * 24 * 4), estado: 'atendido', cid: 'c7' }
   ];
-  S = { rol: 'comercial', verDe: 'todos', view: 'hoy', prev: 'hoy', cid: null, ftab: 'contacto', q: '', cfilter: 'todos', cmode: 'lista', lfilter: 'nuevo', ag: { mode: 'semana', date: sod(now()), f: 'todo' },
+  S = { me: 'u0', users: seedUsers(), verDe: 'todos', view: 'hoy', prev: 'hoy', cid: null, ftab: 'contacto', q: '', cfilter: 'todos', cmode: 'lista', lfilter: 'nuevo', ag: { mode: 'semana', date: sod(now()), f: 'todo' },
     secs: { contacto: true, personales: true, rgpd: true, empresa: false, flota: false, historica: false, usados: false, perfil: false, cuest: false, interno: true },
     edit: null, clients, items, leads, sheet: null, nuevo: freshNuevo(), dtab: 'imp', imp: freshImp(),
     exp: { what: 'clientes', fmt: 'xlsx', filtro: 'todos', personales: true, soloRgpd: false } };
@@ -627,7 +646,7 @@ function freshNuevo() {
     origen: { canal: 'Exposición', campana: 'Sin campaña', motivo: 'Oferta VN' },
     dni: '', nac: 'Español', nacimiento: '', carnet: '', civil: '', prof: '',
     rgpd: RGPD[0], canales: { email: true, sms: true, postal: true, tel: true, wa: true }, publi: true,
-    owner: OWNERS[0], sede: SEDES[0], estado: 'PRE', modelo: 'Sin decidir' };
+    owner: '', sede: SEDES[0], estado: 'PRE', modelo: 'Sin decidir' };
 }
 
 // ---------- consultas ----------
@@ -636,12 +655,21 @@ const pending = cid => S.items.filter(i => i.cid === cid && !i.done).sort((a, b)
 const nextOf = cid => pending(cid)[0];
 const needsPlan = c => c.estado !== 'INH' && !c.sinSeg && !nextOf(c.id);
 const isLate = i => !i.done && i.f < now();
-const ME = OWNERS[0];
-const isJefe = () => S.rol === 'jefe';
-const ownerShort = o => String(o || '').split(' (')[0];
-const mine = c => isJefe() ? (S.verDe === 'todos' || c.owner === S.verDe) : c.owner === ME;
-const itemOwner = i => i.cid ? client(i.cid).owner : (i.resp || ME);
-const mineItem = i => isJefe() ? (S.verDe === 'todos' || itemOwner(i) === S.verDe) : itemOwner(i) === ME;
+const user = id => S.users.find(u => u.id === id);
+const uname = id => (user(id) || {}).nombre || String(id || '—');
+const me = () => user(S.me) || S.users[0];
+// Jefe de ventas, gerente y creador ven a todo el equipo
+const isJefe = () => { const u = me(); return u.creador || u.rol === 'jefe' || u.rol === 'gerente'; };
+// Gestiona usuarios: el creador, y jefes de ventas o gerentes con permiso de administrador
+const canAdmin = () => { const u = me(); return u.creador || (u.admin && (u.rol === 'jefe' || u.rol === 'gerente')); };
+const roleLabel = u => u.creador ? 'Creador' : ROLES[u.rol] + (u.admin ? ' · Administrador' : '');
+const activeUsers = () => S.users.filter(u => u.activo);
+const teamIds = () => S.users.filter(u => u.activo && (u.rol === 'comercial' || S.clients.some(c => c.owner === u.id))).map(u => u.id);
+const userOpts = v => activeUsers().map(u => '<option value="' + esc(u.id) + '"' + (u.id === v ? ' selected' : '') + '>' + esc(u.nombre) + '</option>').join('');
+const ownerShort = o => String(uname(o)).split(' (')[0];
+const mine = c => isJefe() ? (S.verDe === 'todos' || c.owner === S.verDe) : c.owner === S.me;
+const itemOwner = i => i.cid ? client(i.cid).owner : (i.resp || S.me);
+const mineItem = i => isJefe() ? (S.verDe === 'todos' || itemOwner(i) === S.verDe) : itemOwner(i) === S.me;
 const scoped = () => S.clients.filter(mine);
 const lateItems = () => S.items.filter(i => isLate(i) && mineItem(i)).sort((a, b) => a.f - b.f);
 const todayLeft = () => S.items.filter(i => mineItem(i) && !i.done && same(i.f, now()) && i.f >= now()).sort((a, b) => a.f - b.f);
@@ -665,12 +693,13 @@ function renderTop() {
     ficha: ['Ficha de cliente', 'Datos, consentimiento e historial'],
     datos: ['Importar / exportar', 'Trae tus clientes desde cualquier programa o sácalos en Excel, CSV o JSON'],
     equipo: ['Equipo e informes', 'Actividad y resultados de cada comercial'],
-    ajustes: ['Ajustes', 'Micrófono, dictado por voz y preferencias']
+    ajustes: ['Ajustes', 'Micrófono, dictado por voz y preferencias'],
+    usuarios: ['Usuarios', 'Altas, niveles y permisos del equipo']
   }[S.view];
   const back = S.view === 'ficha' ? '<button class="iconbtn" data-act="back" type="button" aria-label="Volver">' + ic('back') + '</button>' : '';
   $('top').innerHTML = back + '<div class="tt"><h2>' + esc(t[0]) + '</h2><small>' + esc(t[1]) + '</small></div>' +
-    '<div class="tb"><label class="rolsel" for="u-rol"><span class="txt">Ver como</span><select id="u-rol" data-in="u.rol"><option value="comercial"' + (isJefe() ? '' : ' selected') + '>Comercial</option><option value="jefe"' + (isJefe() ? ' selected' : '') + '>Jefe de ventas</option></select></label>' +
-    (isJefe() ? '<select id="u-ver" data-in="u.verDe" class="rolver" aria-label="Ver la cartera de"><option value="todos">Todo el equipo</option>' + OWNERS.map(o => '<option value="' + esc(o) + '"' + (S.verDe === o ? ' selected' : '') + '>' + esc(ownerShort(o)) + '</option>').join('') + '</select>' : '') +
+    '<div class="tb"><label class="rolsel" for="u-me"><span class="txt">Entrar como</span><select id="u-me" data-in="u.me">' + activeUsers().map(u => '<option value="' + esc(u.id) + '"' + (u.id === S.me ? ' selected' : '') + '>' + esc(u.nombre) + ' · ' + esc(roleLabel(u)) + '</option>').join('') + '</select></label>' +
+    (isJefe() ? '<select id="u-ver" data-in="u.verDe" class="rolver" aria-label="Ver la cartera de"><option value="todos">Todo el equipo</option>' + teamIds().map(o => '<option value="' + esc(o) + '"' + (S.verDe === o ? ' selected' : '') + '>' + esc(ownerShort(o)) + '</option>').join('') + '</select>' : '') +
     '<span class="demo">Datos ficticios</span><span id="savedind" class="savedind' + (STORE_OK ? '' : ' bad') + '" title="Todo se guarda automáticamente en este navegador">' + savedTxt() + '</span>' +
     '<button class="btn sm mobonly" data-act="go" data-v="ajustes" type="button" aria-label="Ajustes">' + ic('gear', 18) + '</button>' +
     '<button class="btn sm" data-act="guide" type="button" aria-label="Qué probar">' + ic('info', 18) + '<span class="txt">Qué probar</span></button>' +
@@ -680,14 +709,15 @@ function renderTabs() {
   const late = lateItems().length, nl = newLeads().length;
   const tabs = [['hoy', 'Hoy', 'Hoy', 'home', late], ['clientes', 'Clientes', 'Clientes', 'users', 0], ['leads', 'Leads', 'Leads', 'inbox', nl], ['agenda', 'Agenda', 'Agenda', 'cal', 0]]
     .concat(isJefe() ? [['equipo', 'Equipo e informes', 'Equipo', 'chart', 0]] : [])
+    .concat(canAdmin() ? [['usuarios', 'Usuarios', 'Usuarios', 'shield', 0]] : [])
     .concat([['datos', 'Importar / exportar', 'Datos', 'db', 0], ['ajustes', 'Ajustes', 'Ajustes', 'gear', 0], ['nuevo', 'Nuevo cliente', 'Nuevo', 'plus', 0]]);
-  $('who').innerHTML = isJefe() ? '<b>Jefe de ventas (ficticio)</b><span>' + (S.verDe === 'todos' ? 'Viendo todo el equipo' : 'Viendo a ' + esc(ownerShort(S.verDe))) + '</span>' : '<b>' + esc(ownerShort(ME)) + '</b><span>Exposición Centro · su cartera</span>';
+  $('who').innerHTML = '<b>' + esc(me().nombre) + '</b><span>' + esc(roleLabel(me())) + ' · ' + (isJefe() ? (S.verDe === 'todos' ? 'todo el equipo' : 'viendo a ' + esc(ownerShort(S.verDe))) : 'su cartera') + '</span>';
   const active = S.view === 'ficha' ? S.prev : S.view;
   $('tabs').innerHTML = tabs.map(t => '<button class="tab' + (active === t[0] ? ' on' : '') + (t[0] === 'nuevo' ? ' new' : '') + (t[0] === 'ajustes' ? ' cfg' : '') + '" data-act="go" data-v="' + t[0] + '" type="button">' + ic(t[3], 22) +
     '<span class="lbl"><span class="full">' + t[1] + '</span><span class="short">' + t[2] + '</span></span>' + (t[4] ? '<span class="bd">' + t[4] + '</span>' : '') + '</button>').join('');
 }
 function renderContent() {
-  $('content').innerHTML = '<div class="wrapc">' + ({ hoy: vHoy, clientes: vClientes, leads: vLeads, agenda: vAgenda, nuevo: vNuevo, ficha: vFicha, datos: vDatos, equipo: vEquipo, ajustes: vAjustes })[S.view]() + '</div>';
+  $('content').innerHTML = '<div class="wrapc">' + ({ hoy: vHoy, clientes: vClientes, leads: vLeads, agenda: vAgenda, nuevo: vNuevo, ficha: vFicha, datos: vDatos, equipo: vEquipo, ajustes: vAjustes, usuarios: vUsuarios })[S.view]() + '</div>';
   if (S.view === 'nuevo') dupCheck();
 }
 
@@ -788,7 +818,7 @@ function editor(c, key) {
   if (key === 'p:dni') return '<div class="editbox"><input id="e-dni" data-in="e.dni" value="' + esc(d.dni) + '" placeholder="DNI / NIE" style="flex:0 1 160px"><select id="e-nac" data-in="e.nac" aria-label="Nacionalidad">' + opts(NACS, d.nac) + '</select>' + editActs(false) + '</div>';
   if (key === 'p:nacimiento' || key === 'p:carnet') return '<div class="editbox"><input type="date" id="e-date" data-in="e.v" value="' + esc(d.v) + '" max="' + isoDay(now()) + '">' + editActs(false) + '</div>';
   if (key === 'p:civil' || key === 'p:prof') return '<div class="editbox"><select id="e-sel" data-in="e.v"><option value="">Sin indicar</option>' + opts(key === 'p:civil' ? CIVIL : PROF, d.v) + '</select>' + editActs(false) + '</div>';
-  if (key === 'i:owner') return '<div class="editbox"><select id="e-own" data-in="e.v">' + opts(OWNERS, d.v) + '</select>' + editActs(false) + '</div>';
+  if (key === 'i:owner') return '<div class="editbox"><select id="e-own" data-in="e.v">' + userOpts(d.v) + '</select>' + editActs(false) + '</div>';
   if (key === 'i:sede') return '<div class="editbox"><select id="e-sede" data-in="e.v">' + opts(SEDES, d.v) + '</select>' + editActs(false) + '</div>';
   if (key === 'i:modelo') return '<div class="editbox"><select id="e-mod" data-in="e.v">' + opts(MODELOS, d.v) + '</select>' + editActs(false) + '</div>';
   return '';
@@ -851,7 +881,7 @@ function vContacto(c) {
   h += sbar('interno', 'Otros datos del contacto');
   if (S.secs.interno) {
     h += '<div class="sbody">' +
-      kvrow('', 'Pertenece a', E('i:owner') ? editor(c, 'i:owner') : vbtn('i:owner', esc(c.owner) + '<span class="sub">(desde ' + esc(shortDate(c.ownerDesde)) + ')</span>')) +
+      kvrow('', 'Pertenece a', E('i:owner') ? editor(c, 'i:owner') : isJefe() ? vbtn('i:owner', esc(uname(c.owner)) + '<span class="sub">(desde ' + esc(shortDate(c.ownerDesde)) + ')</span>') : '<span>' + esc(uname(c.owner)) + '<span class="sub">(desde ' + esc(shortDate(c.ownerDesde)) + ' · solo un jefe de ventas o gerente puede reasignarlo)</span></span>') +
       kvrow('', 'Exposición', E('i:sede') ? editor(c, 'i:sede') : vbtn('i:sede', esc(c.sede))) +
       kvrow('', 'Modelo de interés', E('i:modelo') ? editor(c, 'i:modelo') : vbtn('i:modelo', esc(c.modelo))) +
       kvrow('', 'Alta', '<span style="font-weight:400">' + esc(shortDate(c.alta)) + '</span>') + '</div>';
@@ -989,7 +1019,7 @@ function vNuevo() {
     '<p class="meta" style="margin:0">Al guardar, el documento de privacidad queda pendiente de firma digital desde la ficha.</p></div>';
   // Otros datos del contacto
   h += sbar('n_interno', 'Otros datos del contacto');
-  h += '<div class="sbody"><div class="frow">' + fld('n-own', 'Comercial asignado', sel('n-own', 'owner', OWNERS, n.owner)) + fld('n-sede', 'Exposición', sel('n-sede', 'sede', SEDES, n.sede)) +
+  h += '<div class="sbody"><div class="frow">' + fld('n-own', 'Comercial asignado', '<select id="n-own" data-in="n.owner">' + userOpts(n.owner || S.me) + '</select>') + fld('n-sede', 'Exposición', sel('n-sede', 'sede', SEDES, n.sede)) +
     fld('n-est', 'Estado inicial', '<select id="n-est" data-in="n.estado"><option value="PRO"' + (n.estado === 'PRO' ? ' selected' : '') + '>PRO · Prospecto</option><option value="PRE"' + (n.estado === 'PRE' ? ' selected' : '') + '>PRE · Preventa</option></select>') +
     fld('n-mod', 'Modelo de interés', sel('n-mod', 'modelo', MODELOS, n.modelo)) + '</div></div>';
   h += '<div class="formfoot"><span class="meta">Al crear el cliente se abre la planificación: ningún cliente queda sin próxima acción.</span><button class="btn" data-act="nclear" type="button">Vaciar</button><button class="btn pri" type="submit">Crear y planificar la primera acción</button></div></form>';
@@ -1007,7 +1037,7 @@ function dupCheck() {
     if (mails.some(m => c.medios.some(x => x.valor.toLowerCase() === m))) { hit = c; why = 'mismo email'; break; }
     if (dni.length >= 8 && c.dni.toUpperCase() === dni) { hit = c; why = 'mismo DNI / CIF'; break; }
   }
-  box.innerHTML = hit ? '<div class="alert warn">' + ic('alert') + '<div class="tx"><div><b>Este cliente ya existe (' + why + ')</b><br><span class="meta">' + esc(hit.nombre) + ' · ' + esc(telOf(hit)) + ' · ' + esc(stLabel(hit.estado)) + ' · ' + esc(hit.owner) + '</span></div><div><button class="btn sm pri" data-act="open" data-v="' + hit.id + '" type="button">Abrir su ficha</button></div></div></div>' : '';
+  box.innerHTML = hit ? '<div class="alert warn">' + ic('alert') + '<div class="tx"><div><b>Este cliente ya existe (' + why + ')</b><br><span class="meta">' + esc(hit.nombre) + ' · ' + esc(telOf(hit)) + ' · ' + esc(stLabel(hit.estado)) + ' · ' + esc(uname(hit.owner)) + '</span></div><div><button class="btn sm pri" data-act="open" data-v="' + hit.id + '" type="button">Abrir su ficha</button></div></div></div>' : '';
 }
 
 // ---------- ventana: reportar / planificar / estado ----------
@@ -1039,6 +1069,7 @@ function renderSheet() {
   const root = $('sheet'), sh = S.sheet;
   if (!sh) { root.innerHTML = ''; return; }
   if (sh.mode === 'guia') { root.innerHTML = sheetFrame('Qué probar', 'Prototipo con datos ficticios', $('guide-tpl').innerHTML, ''); return; }
+  if (sh.mode === 'usuario') { root.innerHTML = userSheetHtml(); return; }
   if (sh.mode === 'reset') { root.innerHTML = sheetFrame('Borrar mis datos', 'Volver a los datos de ejemplo', '<p style="margin:0">Se borrarán los clientes, citas, reportes y cambios que hayas hecho en este navegador y volverán los datos de ejemplo. <b>No se puede deshacer.</b></p><p class="meta" style="margin:0">Si quieres conservarlos, descarga antes una copia: podrás restaurarla desde Importar / exportar.</p>', '<button class="btn" data-act="xcopia" type="button">Descargar copia</button><button class="btn" data-act="sclose" type="button">Cancelar</button><button class="btn danger" data-act="resetok" type="button">Sí, borrar y reiniciar</button>'); return; }
   if (sh.mode === 'cita') { root.innerHTML = citaHtml(); return; }
   const c = client(sh.cid), f = sh.f;
@@ -1190,7 +1221,7 @@ function autoMap(headers) {
   return map;
 }
 function freshImp() { return { step: 'origen', file: '', raw: null, wb: null, sheet: '', hasHeader: true, headers: [], rows: [], map: [], paste: '', backup: null, view: 'todos', confirmReplace: false, result: null, err: '',
-  opts: { tipo: 'auto', estado: 'PRO', canal: 'Exposición', campana: 'Sin campaña', dup: 'skip', plan: false, owner: OWNERS[0], sede: SEDES[0] } }; }
+  opts: { tipo: 'auto', estado: 'PRO', canal: 'Exposición', campana: 'Sin campaña', dup: 'skip', plan: false, owner: '', sede: SEDES[0] } }; }
 
 // lectura de archivos
 function decodeText(buf) { let t; try { t = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { t = new TextDecoder('windows-1252').decode(buf); } return t.replace(/^\ufeff/, ''); }
@@ -1340,7 +1371,7 @@ function buildRecords() {
     const rec = { line, errors, warns, tipo, trat, nombre, medios, dni: dn ? dn.v : '', nacimiento, dirs, estado, rgpd: rg,
       canal: matchCat(CANALES, r.canal) || (r.canal ? fixCase(r.canal) : o.canal), campana: r.campana ? (matchCat(CAMPANAS, r.campana) || r.campana.trim()) : o.campana,
       motivo: matchCat(MOTIVOS, r.motivo) || (r.motivo ? r.motivo.trim() : 'Información'), modelo: matchCat(MODELOS, r.modelo) || (r.modelo ? fixCase(r.modelo) : 'Sin decidir'),
-      owner: (r.owner && OWNERS.find(x => normKey(x).includes(normKey(r.owner)))) || o.owner, sede: (r.sede && matchCat(SEDES, r.sede)) || o.sede, nota: (r.nota || '').trim() };
+      owner: (r.owner && (S.users.find(u => normKey(u.nombre).includes(normKey(r.owner))) || {}).id) || o.owner || S.me, sede: (r.sede && matchCat(SEDES, r.sede)) || o.sede, nota: (r.nota || '').trim() };
     if (!errors.length) {
       const tels = medios.filter(m => isTel(m.tipo)).map(m => normTel(m.valor)), mails = medios.filter(m => !isTel(m.tipo)).map(m => m.valor);
       rec.dup = S.clients.find(c => tels.some(t => telsOf(c).includes(t)) || mails.some(m => c.medios.some(x => x.valor.toLowerCase() === m)) || (rec.dni && rec.dni.length >= 8 && c.dni.toUpperCase() === rec.dni)) || null;
@@ -1418,14 +1449,14 @@ function clientRow(c) {
   const row = { 'Nombre completo': c.nombre, 'Tratamiento': c.trat, 'Tipo': c.tipo, 'Estado': c.estado, 'Estado (texto)': stLabel(c.estado),
     'Teléfono móvil': mov ? mov.valor : '', 'Otros teléfonos': tels.filter(m => m !== mov).map(m => m.valor).join(' / '), 'Email': emailOf(c) };
   if (e.personales) Object.assign(row, { 'DNI': c.dni, 'Fecha de nacimiento': c.nacimiento, 'Dirección': d ? d.via + ' ' + d.nombre : '', 'Número': d ? d.num : '', 'Piso y letra': d ? d.piso : '', 'Código postal': d ? d.cp : '', 'Localidad': d ? d.loc : '', 'Provincia': d ? d.prov : '', 'País': d ? d.pais : '' });
-  return Object.assign(row, { 'Canal': o.canal, 'Campaña': o.campana, 'Origen de la negociación': o.motivo, 'Modelo de interés': c.modelo, 'Comercial': c.owner, 'Exposición': c.sede,
+  return Object.assign(row, { 'Canal': o.canal, 'Campaña': o.campana, 'Origen de la negociación': o.motivo, 'Modelo de interés': c.modelo, 'Comercial': uname(c.owner), 'Exposición': c.sede,
     'Acepta RGPD': c.rgpd === RGPD[0] ? 'Sí' : c.rgpd === RGPD[3] ? 'Pendiente' : 'No', 'Canales autorizados': c.rgpd === RGPD[0] ? CANALES_RGPD.filter(k => c.canales[k[0]]).map(k => k[1]).join(', ') : '',
     'Publicidad': c.publi && c.rgpd === RGPD[0] ? 'Sí' : 'No', 'Próxima acción': n ? TYPES[n.tipo].l : '', 'Fecha próxima acción': n ? isoDay(n.f) + ' ' + hm(n.f) : '', 'Alta': isoDay(c.alta) });
 }
 function agendaRow(i) { const c = i.cid ? client(i.cid) : null; return { 'Fecha': isoDay(i.f), 'Hora': hm(i.f), 'Duración (min)': i.dur || 30, 'Tipo': TYPES[i.tipo].l, 'Cliente': itemWho(i), 'Teléfono': c ? telOf(c) : (i.tel || ''), 'Estado del cliente': c ? stLabel(c.estado) : '', 'Nota': i.nota || '', 'Vencida': isLate(i) ? 'Sí' : 'No' }; }
 function doExport() {
   const e = S.exp, stamp = isoDay(now());
-  if (e.what === 'copia') { saveFile('alfa-crm-copia-' + stamp + '.json', JSON.stringify({ app: 'Alfa CRM', version: 1, exportado: new Date().toISOString(), clientes: S.clients, agenda: S.items, leads: S.leads }, null, 2), 'application/json'); return; }
+  if (e.what === 'copia') { saveFile('alfa-crm-copia-' + stamp + '.json', JSON.stringify({ app: 'Alfa CRM', version: 1, exportado: new Date().toISOString(), clientes: S.clients, agenda: S.items, leads: S.leads, usuarios: S.users }, null, 2), 'application/json'); return; }
   const rows = e.what === 'agenda' ? S.items.filter(i => !i.done && mineItem(i)).sort((a, b) => a.f - b.f).map(agendaRow) : exportClients().map(clientRow);
   if (!rows.length) { toast('No hay nada que exportar con ese filtro'); return; }
   const base = 'alfa-crm-' + (e.what === 'agenda' ? 'agenda' : 'clientes') + '-' + stamp;
@@ -1487,7 +1518,7 @@ function vImport() {
       '<div class="fld"><label for="o-estado">Estado</label><select id="o-estado" data-in="o.estado">' + STATES.map(s => '<option value="' + s.c + '"' + (s.c === o.estado ? ' selected' : '') + '>' + s.c + ' · ' + s.l + '</option>').join('') + '</select></div>' +
       '<div class="fld"><label for="o-canal">Canal</label><select id="o-canal" data-in="o.canal">' + opts(CANALES, o.canal) + '</select></div>' +
       '<div class="fld"><label for="o-camp">Campaña</label><select id="o-camp" data-in="o.campana">' + opts(CAMPANAS, o.campana) + '</select></div>' +
-      '<div class="fld"><label for="o-own">Comercial</label><select id="o-own" data-in="o.owner">' + opts(OWNERS, o.owner) + '</select></div>' +
+      '<div class="fld"><label for="o-own">Comercial</label><select id="o-own" data-in="o.owner">' + userOpts(o.owner || S.me) + '</select></div>' +
       '<div class="fld"><label for="o-sede">Exposición</label><select id="o-sede" data-in="o.sede">' + opts(SEDES, o.sede) + '</select></div></div></div>';
     h += '<div class="formfoot"><span class="meta">' + (imp.map.some(t => ['full', 'nom', 'ap1', 'razon'].includes(t)) ? 'Siguiente paso: ver duplicados y errores antes de importar nada.' : '<span style="color:var(--bad)">Asigna al menos una columna de nombre o de empresa.</span>') + '</span><button class="btn" data-act="ireset" type="button">Cancelar</button><button class="btn pri" data-act="irev" type="button"' + (imp.map.some(t => ['full', 'nom', 'ap1', 'razon'].includes(t)) ? '' : ' disabled') + '>Revisar los datos</button></div>';
     return h;
@@ -1552,7 +1583,7 @@ function teamStats(o) {
   };
 }
 function vEquipo() {
-  const rows = OWNERS.map(teamStats), sum = k => rows.reduce((s, r) => s + r[k], 0);
+  const rows = teamIds().map(teamStats), sum = k => rows.reduce((s, r) => s + r[k], 0);
   const nl = newLeads(), espera = nl.length ? Math.round(nl.reduce((s, l) => s + (now() - l.rec) / 60000, 0) / nl.length) : 0;
   const esperaTxt = espera < 60 ? espera + ' min' : Math.round(espera / 60) + ' h';
   let h = '<div class="kpis">' +
@@ -1575,11 +1606,81 @@ function vEquipo() {
   return h;
 }
 function teamExport(fmt) {
-  const rows = OWNERS.map(teamStats).map(r => ({ 'Comercial': ownerShort(r.owner), 'Clientes activos': r.clientes, 'Prospectos': r.pro, 'Preventa': r.pre, 'Calientes': r.cal, 'Seguimiento': r.seg, 'Ventas (cartera + ex clientes)': r.ventas, 'No compra': r.noc, 'Conversión %': r.conversion, 'Acciones vencidas': r.vencidas, 'Sin próxima acción': r.sinPlan, 'Citas próximos 7 días': r.prox7, 'Acciones últimos 7 días': r.hechas7 }));
+  const rows = teamIds().map(teamStats).map(r => ({ 'Comercial': ownerShort(r.owner), 'Clientes activos': r.clientes, 'Prospectos': r.pro, 'Preventa': r.pre, 'Calientes': r.cal, 'Seguimiento': r.seg, 'Ventas (cartera + ex clientes)': r.ventas, 'No compra': r.noc, 'Conversión %': r.conversion, 'Acciones vencidas': r.vencidas, 'Sin próxima acción': r.sinPlan, 'Citas próximos 7 días': r.prox7, 'Acciones últimos 7 días': r.hechas7 }));
   const name = 'alfa-crm-informe-equipo-' + isoDay(now());
   if (fmt === 'csv') saveFile(name + '.csv', toCsv(rows), 'text/csv');
   else if (typeof XLSX === 'undefined') toast('No se ha podido cargar Excel: exporta en CSV');
   else saveFile(name + '.xlsx', toXlsx(rows, 'Equipo'), '');
+}
+
+// ---------- usuarios ----------
+const canEditUser = u => me().creador || (canAdmin() && !u.creador && (!u.admin || u.id === S.me));
+function vUsuarios() {
+  if (!canAdmin()) return '<div class="alert">' + ic('alert') + '<div class="tx"><b>No tienes permiso para gestionar usuarios</b><span>Solo el creador y los jefes de ventas o gerentes con permiso de administrador pueden hacerlo.</span></div></div>';
+  const yo = me(), order = u => u.creador ? 0 : u.rol === 'gerente' ? 1 : u.rol === 'jefe' ? 2 : 3;
+  const list = S.users.slice().sort((a, b) => (b.activo - a.activo) || order(a) - order(b) || a.nombre.localeCompare(b.nombre));
+  let h = '<div class="toolbar"><p class="meta" style="flex:1;min-width:240px;margin:0">' + (yo.creador ? 'Eres el <b>creador</b>: puedes gestionar a todos y dar o quitar el permiso de administrador.' : 'Eres <b>administrador</b>: puedes dar de alta y editar usuarios. El permiso de administrador solo lo da el creador.') + '</p><button class="btn pri" data-act="unew" type="button">' + ic('plus', 18) + 'Nuevo usuario</button></div>';
+  h += '<div class="tbl"><table><thead><tr><th>Usuario</th><th>Email</th><th>Nivel</th><th>Exposición</th><th>Clientes</th><th>Estado</th><th></th></tr></thead><tbody>' +
+    list.map(u => '<tr class="' + (u.activo ? '' : 'inactivo') + '"><td><b>' + esc(u.nombre) + '</b>' + (u.creador ? '<span class="ubadge cre">Creador</span>' : u.admin ? '<span class="ubadge">Administrador</span>' : '') + (u.id === S.me ? '<span class="ubadge off">Tú ahora</span>' : '') + '</td>' +
+      '<td>' + esc(u.email) + '</td><td>' + esc(ROLES[u.rol]) + '</td><td>' + esc(u.sede) + '</td><td class="mono">' + S.clients.filter(c => c.owner === u.id).length + '</td><td>' + (u.activo ? 'Activo' : 'Desactivado') + '</td>' +
+      '<td>' + (canEditUser(u) ? '<button class="btn sm" data-act="uedit" data-v="' + esc(u.id) + '" type="button">Editar</button>' : '<span class="meta">' + (u.creador ? 'Solo lo edita el creador' : 'Solo lo edita el creador') + '</span>') + '</td></tr>').join('') + '</tbody></table></div>';
+  const M = [['Ver y trabajar su propia cartera', 1, 1, 1, 1], ['Ver a todo el equipo y filtrar por comercial', 0, 1, 1, 1], ['Equipo e informes', 0, 1, 1, 1], ['Reasignar clientes a otro comercial', 0, 1, 1, 1], ['Dar de alta, editar y desactivar usuarios', 0, 0, 1, 1], ['Dar o quitar el permiso de administrador', 0, 0, 0, 1], ['Puede haber más de uno', 1, 1, 1, 0]];
+  h += '<div class="panel stack"><h3 class="sec">Qué puede hacer cada nivel</h3><div class="tbl"><table><thead><tr><th></th><th>Comercial</th><th>Jefe de ventas / Gerente</th><th>… con permiso de administrador</th><th>Creador</th></tr></thead><tbody>' +
+    M.map(r => '<tr><td>' + r[0] + '</td>' + r.slice(1).map(v => '<td class="' + (v ? 'si' : 'nn') + '">' + (v ? 'Sí' : 'No') + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>' +
+    '<p class="meta" style="margin:0">Jefe de ventas y gerente tienen la misma vista. El creador es único: no se puede crear otro, ni desactivarlo ni quitarle permisos. En este prototipo no hay contraseñas: con "Entrar como" eliges el usuario para probar lo que ve cada uno.</p></div>';
+  return h;
+}
+function openUser(id) {
+  const u = id ? user(id) : null;
+  S.sheet = { mode: 'usuario', uid: id, f: u ? { unom: u.nombre, uemail: u.email, urol: u.rol, usede: u.sede, uadmin: u.admin, uactivo: u.activo, ureasig: '' } : { unom: '', uemail: '', urol: 'comercial', usede: SEDES[0], uadmin: false, uactivo: true, ureasig: '' } };
+  renderSheet();
+}
+function userSheetHtml() {
+  const sh = S.sheet, f = sh.f, u = sh.uid ? user(sh.uid) : null, yo = me();
+  const isCre = u && u.creador, self = u && u.id === S.me;
+  const lead = f.urol === 'jefe' || f.urol === 'gerente';
+  const nCl = u ? S.clients.filter(c => c.owner === u.id).length : 0;
+  let body = '<div class="frow"><div class="fld"><label for="u-nom">Nombre *</label><input id="u-nom" data-in="s.unom" value="' + esc(f.unom) + '" autocomplete="off"></div>' +
+    '<div class="fld"><label for="u-email">Email *</label><input id="u-email" data-in="s.uemail" type="email" value="' + esc(f.uemail) + '" autocomplete="off"></div></div>' +
+    '<div class="frow"><div class="fld"><label for="u-rol">Nivel</label><select id="u-rol" data-in="s.urol"' + (isCre ? ' disabled' : '') + '>' + Object.keys(ROLES).map(k => '<option value="' + k + '"' + (f.urol === k ? ' selected' : '') + '>' + ROLES[k] + '</option>').join('') + '</select></div>' +
+    '<div class="fld"><label for="u-sede">Exposición</label><select id="u-sede" data-in="s.usede">' + opts(SEDES, f.usede) + '</select></div></div>';
+  if (isCre) body += '<div class="alert warn">' + ic('shield') + '<div class="tx">Es el <b>creador</b>: tiene todos los permisos y no se puede desactivar ni cambiar de nivel.</div></div>';
+  else {
+    body += yo.creador
+      ? '<label class="sw" for="u-adm">Permiso de administrador (gestiona usuarios)' + (lead ? '' : ' · solo para jefes de ventas o gerentes') + '<input type="checkbox" id="u-adm" data-in="s.uadmin"' + (f.uadmin && lead ? ' checked' : '') + (lead ? '' : ' disabled') + '></label>'
+      : '<p class="meta" style="margin:0">Administrador: <b>' + (f.uadmin ? 'sí' : 'no') + '</b>. Solo el creador puede cambiarlo.</p>';
+    if (!self) body += '<label class="sw" for="u-act">Usuario activo (puede entrar)<input type="checkbox" id="u-act" data-in="s.uactivo"' + (f.uactivo ? ' checked' : '') + '></label>';
+    if (!f.uactivo && nCl) body += '<div class="fld"><label for="u-reas">Sus ' + nCl + ' clientes pasan a *</label><select id="u-reas" data-in="s.ureasig"><option value="">Elige un usuario</option>' + activeUsers().filter(x => x.id !== u.id).map(x => '<option value="' + esc(x.id) + '"' + (f.ureasig === x.id ? ' selected' : '') + '>' + esc(x.nombre) + '</option>').join('') + '</select></div>';
+  }
+  const foot = '<button class="btn" data-act="sclose" type="button">Cancelar</button><button class="btn pri" data-act="usave" type="button">' + (u ? 'Guardar cambios' : 'Crear usuario') + '</button>';
+  return sheetFrame(u ? 'Editar usuario' : 'Nuevo usuario', u ? u.nombre : 'Alta en Alfa CRM', body, foot);
+}
+function saveUser() {
+  const sh = S.sheet, f = sh.f, u = sh.uid ? user(sh.uid) : null, yo = me();
+  const nombre = f.unom.trim(), email = f.uemail.trim().toLowerCase();
+  if (!nombre) { toast('Falta el nombre', true); return; }
+  if (!EMAIL_RE.test(email)) { toast('El email no es válido', true); return; }
+  if (S.users.some(x => x.email.toLowerCase() === email && (!u || x.id !== u.id))) { toast('Ya hay un usuario con ese email', true); return; }
+  if (u && !canEditUser(u)) { toast('No tienes permiso para editar este usuario', true); return; }
+  const lead = f.urol === 'jefe' || f.urol === 'gerente';
+  if (u && u.creador) { Object.assign(u, { nombre, email, sede: f.usede }); }
+  else {
+    const admin = yo.creador ? (lead && !!f.uadmin) : (u ? u.admin && lead : false);
+    const activo = u && u.id === S.me ? true : !!f.uactivo;
+    if (u && !activo && u.activo) {
+      const own = S.clients.filter(c => c.owner === u.id);
+      if (own.length && !f.ureasig) { toast('Elige a quién pasan sus clientes', true); return; }
+      own.forEach(c => { c.owner = f.ureasig; c.ownerDesde = now(); c.hist.push({ f: now(), t: 'sys', txt: 'Reasignado de ' + u.nombre + ' a ' + uname(f.ureasig) + ' por baja del usuario', u: me().nombre }); });
+      S.items.forEach(i => { if (!i.cid && i.resp === u.id) i.resp = f.ureasig; });
+    }
+    if (u) Object.assign(u, { nombre, email, rol: f.urol, sede: f.usede, admin, activo });
+    else S.users.push({ id: nid('u'), nombre, email, rol: f.urol, sede: f.usede, admin, creador: false, activo: true });
+  }
+  closeSheet();
+  if (S.verDe !== 'todos' && !(user(S.verDe) || {}).activo) S.verDe = 'todos';
+  if (!canAdmin() && S.view === 'usuarios') { S.view = 'hoy'; S.prev = 'hoy'; }
+  toast(u ? 'Usuario actualizado' : 'Usuario creado: ' + nombre);
+  render();
 }
 
 // ---------- cita manual en la agenda ----------
@@ -1632,14 +1733,14 @@ function saveCita() {
     const dup = findByTel(f.cTel);
     if (dup) cid = dup.id;
     else {
-      const c = mkClient({ n: ++uid, nombre: f.cNom.trim(), estado: 'PRO', alta: now(), ownerDesde: now(), firma: null,
+      const c = mkClient({ n: ++uid, owner: S.me, nombre: f.cNom.trim(), estado: 'PRO', alta: now(), ownerDesde: now(), firma: null,
         medios: f.cTel.trim() ? [{ tipo: 'Teléfono móvil', valor: f.cTel.trim(), principal: true, franja: 'Cualquier hora' }] : [],
         origenes: [{ canal: 'Teléfono', campana: 'Sin campaña', motivo: 'Información', f: now() }],
         hist: [{ f: now(), t: 'sys', txt: 'Se crea el contacto desde la agenda', u: 'Tú' }] });
       S.clients.push(c); cid = c.id;
     }
   }
-  const data = { cid, tipo: f.tipo, f: d, dur: +f.dur, nota: f.nota.trim(), titulo: f.who === 'sin' ? f.titulo.trim() : '', contacto: f.who === 'manual' && !cid ? f.cNom.trim() : '', tel: f.who === 'manual' && !cid ? f.cTel.trim() : '' };
+  const data = { cid, resp: S.me, tipo: f.tipo, f: d, dur: +f.dur, nota: f.nota.trim(), titulo: f.who === 'sin' ? f.titulo.trim() : '', contacto: f.who === 'manual' && !cid ? f.cNom.trim() : '', tel: f.who === 'manual' && !cid ? f.cTel.trim() : '' };
   let it;
   if (sh.itemId) { it = S.items.find(i => i.id === sh.itemId); Object.assign(it, data); }
   else { it = Object.assign({ id: nid('i'), done: false }, data); S.items.push(it); }
@@ -1683,7 +1784,7 @@ function saveEdit() {
     if (d.nac !== c.nac) logChange(c, 'Nacionalidad', c.nac, d.nac);
     c.dni = d.dni.trim().toUpperCase(); c.nac = d.nac;
   } else {
-    const field = key.slice(2), fmt = v => (field === 'nacimiento' || field === 'carnet') ? longDate(v) : v;
+    const field = key.slice(2), fmt = v => (field === 'nacimiento' || field === 'carnet') ? longDate(v) : field === 'owner' ? uname(v) : v;
     if (d.v !== c[field]) { logChange(c, LBL[field], fmt(c[field]), fmt(d.v)); if (field === 'owner') c.ownerDesde = now(); c[field] = d.v; }
   }
   S.edit = null; toast('Cambio guardado en el historial'); render();
@@ -1707,7 +1808,7 @@ function attend(lid) {
   const txt = 'Lead recibido: ' + l.peticion + ' ' + l.modelo + ' (' + l.canal + ' / ' + l.campana + ')';
   if (c) { c.hist.push({ f: l.rec, t: 'sys', txt: txt + ' · añadido a cliente existente', u: 'Sistema' }); c.origenes.push({ canal: l.canal, campana: l.campana, motivo: l.peticion, f: l.rec }); }
   else {
-    c = mkClient({ n: ++uid, nombre: l.nombre, estado: 'PRE', modelo: l.modelo, alta: now(), ownerDesde: now(), firma: null,
+    c = mkClient({ n: ++uid, owner: S.me, nombre: l.nombre, estado: 'PRE', modelo: l.modelo, alta: now(), ownerDesde: now(), firma: null,
       medios: [{ tipo: 'Teléfono móvil', valor: l.tel, principal: true, franja: 'Cualquier hora' }],
       origenes: [{ canal: l.canal, campana: l.campana, motivo: l.peticion, f: l.rec }], hist: [{ f: l.rec, t: 'sys', txt, u: 'Sistema' }] });
     S.clients.push(c);
@@ -1772,6 +1873,9 @@ const H = {
   scrim: (v, el, e) => { if (e.target === el) closeSheet(); },
   ssave: () => saveSheet(),
   ssaveclose: () => { S.sheet.close = true; saveSheet(); },
+  unew: () => openUser(null),
+  uedit: v => openUser(v),
+  usave: () => saveUser(),
   askmic: () => askMic(),
   micperm: () => { refreshMicPerm(); toast('Permiso comprobado'); },
   newcita: v => { const p = (v || '').split('|'); openCita(p[0] ? { date: p[0], time: p[1] || '10:00' } : null); },
@@ -1803,6 +1907,7 @@ const H = {
   bnoreplace: () => { S.imp.confirmReplace = false; render(); },
   breplace: () => {
     const b = reviveBackup(S.imp.backup); S.clients = b.clientes; S.items = b.agenda || []; S.leads = b.leads || [];
+    if (Array.isArray(b.usuarios) && b.usuarios.filter(u => u.creador).length === 1) { S.users = b.usuarios; if (!user(S.me)) S.me = b.usuarios.find(u => u.creador).id; }
     uid = Math.max(uid, ...S.clients.concat(S.items).map(x => +String(x.id).replace(/\D/g, '') || 0)) + 1;
     S.imp = Object.assign(freshImp(), { opts: S.imp.opts }); toast('Datos sustituidos por la copia'); go('hoy');
   },
@@ -1833,7 +1938,7 @@ document.addEventListener('input', e => {
   const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
   if (k === 'q') { S.q = val; const l = $('clist'); if (l) l.innerHTML = clistHtml(); return; }
   if (k.startsWith('e.') && S.edit) { S.edit.d[k.slice(2)] = val; return; }
-  if (k === 'u.rol') { S.rol = val; S.verDe = 'todos'; S.edit = null; if (val === 'jefe') { S.view = 'equipo'; S.prev = 'equipo'; } else if (S.view === 'equipo') { S.view = 'hoy'; S.prev = 'hoy'; } toast(val === 'jefe' ? 'Vista de jefe de ventas: ves a todo el equipo' : 'Vista de comercial: solo tu cartera'); render(); return; }
+  if (k === 'u.me') { S.me = val; S.verDe = 'todos'; S.edit = null; S.sheet = null; if ((!isJefe() && S.view === 'equipo') || (!canAdmin() && S.view === 'usuarios') || S.view === 'ficha') { S.view = 'hoy'; S.prev = 'hoy'; } toast('Has entrado como ' + me().nombre + ' (' + roleLabel(me()) + ')'); render(); return; }
   if (k === 'u.verDe') { S.verDe = val; render(); return; }
   if (k.startsWith('g.')) { CFG[k.slice(2)] = val; saveCfg(); if (k === 'g.mic' && !val) { micBtn.hidden = true; micTip.hidden = true; } toast(k === 'g.mic' ? (val ? 'Botón de micrófono activado' : 'Botón de micrófono oculto') : 'Idioma del dictado: ' + (LANGS.find(l => l[0] === val) || ['', val])[1]); return; }
   if (k === 'p.paste') { S.imp.paste = val; return; }
@@ -1859,6 +1964,7 @@ document.addEventListener('input', e => {
     const key = k.slice(2); S.sheet.f[key] = val;
     if (key === 'com') { const c = $('s-cnt'); if (c) c.textContent = val.length + ' / 1000'; return; }
     if (key === 'q') { const r = $('c-res'); if (r) r.innerHTML = pickList(val); return; }
+    if (['unom', 'uemail'].includes(key)) return;
     if (['nNota', 'nota', 'cNom', 'cTel', 'titulo'].includes(key)) {
       if (S.sheet.mode === 'cita') { const btn = document.querySelector('[data-act="csave"]'), f = S.sheet.f, d = citaWhen(f); const okWho = f.who === 'cliente' ? !!f.cid : f.who === 'manual' ? !!f.cNom.trim() : !!f.titulo.trim(); if (btn) btn.disabled = !(f.tipo && okWho && d && d >= now()); }
       if (key === 'cTel') { const box = $('c-dup'), dup = findByTel(val); if (box) box.innerHTML = dup ? '<div class="alert warn">' + ic('alert') + '<div class="tx"><span>Ese teléfono ya es de <b>' + esc(dup.nombre) + '</b>.</span><div><button class="btn sm pri" data-act="cpick" data-v="' + dup.id + '" type="button">Usar ese cliente</button></div></div></div>' : ''; }
@@ -1886,7 +1992,7 @@ document.addEventListener('submit', e => {
   const c = mkClient({ n: ++uid, tipo: n.tipo, trat: emp ? '' : n.trat, nombre, estado: n.estado, medios, dirs, origenes: [{ canal: n.origen.canal, campana: n.origen.campana, motivo: n.origen.motivo, f: now() }],
     dni: (emp ? n.cif : n.dni).trim().toUpperCase(), nac: n.nac, nacimiento: n.nacimiento, carnet: n.carnet, civil: n.civil, prof: n.prof,
     rgpd: n.rgpd, canales: Object.assign({}, n.canales), publi: n.publi, firma: null, empresa: emp && n.pcontacto.trim() ? ['Persona de contacto: ' + n.pcontacto.trim()] : [],
-    owner: n.owner, ownerDesde: now(), sede: n.sede, modelo: n.modelo, alta: now(),
+    owner: n.owner || S.me, ownerDesde: now(), sede: n.sede, modelo: n.modelo, alta: now(),
     hist: [{ f: now(), t: 'sys', txt: 'Se crea el contacto · ' + n.origen.canal + (n.origen.campana !== 'Sin campaña' ? ' / ' + n.origen.campana : '') + ' · ' + n.origen.motivo, u: 'Tú' }] });
   S.clients.push(c); S.nuevo = freshNuevo();
   openClient(c.id); openSheet('alta', c.id);
@@ -2055,7 +2161,7 @@ let STORE_OK = true, LAST_SAVE = null;
 const savedTxt = () => STORE_OK ? (LAST_SAVE ? 'Guardado ' + hm(LAST_SAVE) : 'Guardado automático') : 'Sin guardar';
 function persist() {
   try {
-    localStorage.setItem(DATA_KEY, JSON.stringify({ v: 1, savedAt: new Date().toISOString(), uid, clients: S.clients, items: S.items, leads: S.leads }));
+    localStorage.setItem(DATA_KEY, JSON.stringify({ v: 2, savedAt: new Date().toISOString(), uid, clients: S.clients, items: S.items, leads: S.leads, users: S.users, me: S.me }));
     STORE_OK = true; LAST_SAVE = new Date();
   } catch (e) { STORE_OK = false; }
   const el = document.getElementById('savedind');
@@ -2066,9 +2172,13 @@ function loadSaved() {
     const raw = localStorage.getItem(DATA_KEY);
     if (!raw) return false;
     const o = JSON.parse(raw);
-    if (!o || o.v !== 1 || !Array.isArray(o.clients)) return false;
+    if (!o || (o.v !== 1 && o.v !== 2) || !Array.isArray(o.clients)) return false;
     const b = reviveBackup({ clientes: o.clients, agenda: o.items || [], leads: o.leads || [] });
     S.clients = b.clientes; S.items = b.agenda; S.leads = b.leads;
+    if (Array.isArray(o.users) && o.users.filter(u => u.creador).length === 1) S.users = o.users;
+    S.clients.forEach(c => { c.owner = LEGACY_OWNERS[c.owner] || c.owner; });
+    S.items.forEach(i => { if (i.resp) i.resp = LEGACY_OWNERS[i.resp] || i.resp; });
+    if (o.me && user(o.me) && user(o.me).activo) S.me = o.me;
     uid = Math.max(uid, +o.uid || 0);
     LAST_SAVE = new Date(o.savedAt);
     return true;
