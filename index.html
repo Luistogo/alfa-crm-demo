@@ -75,7 +75,7 @@ button { cursor: pointer; }
 .who b { color: var(--side-ink); }
 .main { min-width: 0; display: flex; flex-direction: column; min-height: 0; }
 .top { background: var(--surface); border-bottom: 1px solid var(--line); padding-block: 14px; padding-left: 28px; padding-right: max(28px, env(safe-area-inset-right, 0px)); display: flex; align-items: center; gap: 12px; }
-.top .tt { flex: 1; min-width: 0; }
+.top .tt { flex: 1; min-width: 150px; }
 .top h2 { font-family: var(--f-display); font-size: 1.9rem; line-height: 1; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .top small { color: var(--muted); font-size: 14px; }
 .top .tb { display: flex; gap: 8px; align-items: center; }
@@ -711,7 +711,7 @@ function renderTop() {
     equipo: ['Equipo e informes', 'Actividad y resultados de cada comercial'],
     ajustes: ['Ajustes', 'Micrófono, dictado por voz y preferencias'],
     usuarios: ['Usuarios', 'Altas, niveles y permisos del equipo'],
-    historico: ['Histórico de reportes', 'Lo reportado por día, semana, mes o año']
+    historico: ['Histórico', 'Reportes por día, semana, mes o año']
   }[S.view];
   const back = S.view === 'ficha' ? '<button class="iconbtn" data-act="back" type="button" aria-label="Volver">' + ic('back') + '</button>' : '';
   $('top').innerHTML = back + '<div class="tt"><h2>' + esc(t[0]) + '</h2><small>' + esc(t[1]) + '</small></div>' +
