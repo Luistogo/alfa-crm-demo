@@ -1753,8 +1753,8 @@ function cancelLead(L) {
   if (L.created) {
     S.clients = S.clients.filter(x => x.id !== L.cid);
     S.items = S.items.filter(i => i.cid !== L.cid);
-    if (S.cid === L.cid) { S.view = 'leads'; S.prev = 'leads'; }
   }
+  if (S.cid === L.cid) { S.view = 'leads'; S.prev = 'leads'; }
   toast('Sin reportar: el lead sigue en la bandeja de leads');
 }
 
