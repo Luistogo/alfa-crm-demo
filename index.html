@@ -289,7 +289,9 @@ button.card:hover { border-color: var(--accent); }
 .pickres { display: flex; flex-direction: column; gap: 6px; }
 .pick { display: flex; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; text-align: left; width: 100%; }
 .pick:hover { border-color: var(--accent); }
-.pick span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pick > span:not(.st) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pick > .st { flex: none; }
+.pick .own { color: var(--accent); font-weight: 600; }
 .pick small { color: var(--muted); font-size: 13px; }
 .pick.on { border-color: var(--accent); background: var(--accent-soft); }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
@@ -436,7 +438,7 @@ a.btn { text-decoration: none; color: inherit; }
       <li>En <b>Clientes</b>, cambia el orden: prioridad, fecha de alta o alfabético.</li>
       <li>En <b>Histórico</b>, mira lo reportado por día, semana, mes o año y quién lo hizo.</li>
     </ol>
-    <p class="meta">Preguntas para el equipo: ¿reportar es más rápido que en la herramienta actual? ¿Falta algún dato en la ficha? ¿Lo usaríais también desde el móvil?</p>
+    <p class="meta">Preguntas para el equipo: ¿reportar es más rápido que en la herramienta de la que venimos? ¿Falta algún dato en la ficha? ¿Lo usaríais también desde el móvil?</p>
     <div><button class="btn" data-act="reset" type="button">Reiniciar la demo</button></div>
   </div>
 </template>
@@ -528,7 +530,21 @@ const MOTIVOS_INH = ['Datos incorrectos', 'No interesado', 'Pide no ser contacta
 const CANALES = ['Web', 'Teléfono', 'Exposición', 'Redes sociales', 'Evento', 'Referido', 'Taller'];
 const CAMPANAS = ['Sin campaña', 'Renting otoño 2026', 'Feria del eléctrico 2026'];
 const MOTIVOS = ['Oferta VN', 'Oferta VO', 'Prueba de vehículo', 'Tasación', 'Renting', 'Cita previa', 'Información'];
-const MODELOS = ['Qashqai', 'Juke', 'X-Trail', 'Ariya', 'Leaf', 'Micra', 'Townstar', 'Sin decidir'];
+// Marcas y modelos: los crean y desactivan los administradores (Ajustes → Marcas y modelos)
+const MODELOS_INICIALES = ['i10', 'i20', 'Bayon', 'Kona', 'Tucson', 'Santa Fe', 'IONIQ 5', 'IONIQ 6', 'INSTER', 'Staria'];
+const MODELOS_ANTERIORES = { Qashqai: 'Tucson', Juke: 'Kona', 'X-Trail': 'Santa Fe', Ariya: 'IONIQ 5', Leaf: 'INSTER', Micra: 'i10', Townstar: 'Staria' };
+const seedCat = () => ({ marcas: [{ id: 'mk1', nombre: 'Hyundai', activo: true }], modelos: MODELOS_INICIALES.map((n, i) => ({ id: 'md' + (i + 1), marca: 'mk1', nombre: n, activo: true })) });
+let CAT = seedCat();
+const marcaDe = m => CAT.marcas.find(k => k.id === m.marca) || {};
+const modelNames = () => CAT.modelos.filter(m => m.activo && marcaDe(m).activo).map(m => m.nombre).concat('Sin decidir');
+function modelOpts(v) {
+  const act = CAT.marcas.filter(k => k.activo), varias = act.length > 1;
+  const grupos = act.map(k => {
+    const ms = CAT.modelos.filter(m => m.marca === k.id && m.activo).map(m => m.nombre);
+    return ms.length ? (varias ? '<optgroup label="' + esc(k.nombre) + '">' : '') + opts(ms, v) + (varias ? '</optgroup>' : '') : '';
+  }).join('');
+  return grupos + opts(['Sin decidir'], v) + (v && !modelNames().includes(v) ? '<option selected>' + esc(v) + '</option>' : '');
+}
 const MEDIO_TIPOS = ['Teléfono móvil', 'Teléfono casa', 'Teléfono trabajo', 'WhatsApp', 'Email personal', 'Email trabajo'];
 const FRANJAS = ['Cualquier hora', 'Mañanas (9 a 14)', 'Tardes (16 a 20)', 'Fines de semana'];
 const VIAS = ['Calle', 'Avenida', 'Plaza', 'Paseo', 'Camino', 'Carretera', 'Ronda', 'Travesía', 'Urbanización'];
@@ -600,58 +616,58 @@ function seed() {
   const dir = (via, nombre, num, piso, loc) => ({ via, nombre, num, piso, cp: '00001', loc, prov: 'Provincia Demo', pais: 'España', principal: true });
   const org = (canal, campana, motivo, off) => ({ canal, campana, motivo, f: D(off, 10) });
   const clients = [
-    mkClient({ n: 1, trat: 'Sra.', nombre: 'Ana Belmonte Ríos', estado: 'CAL', modelo: 'Qashqai', dni: '00000001R', nacimiento: '1986-04-12', carnet: '2005-06-20', civil: 'Casado/a', prof: 'Asalariado/a',
+    mkClient({ n: 1, trat: 'Sra.', nombre: 'Ana Belmonte Ríos', estado: 'CAL', modelo: 'Tucson', dni: '00000001R', nacimiento: '1986-04-12', carnet: '2005-06-20', civil: 'Casado/a', prof: 'Asalariado/a',
       dirs: [dir('Calle', 'del Olmo', '12', '3º B', 'Villaejemplo')], origenes: [org('Web', 'Renting otoño 2026', 'Renting', -6)],
       perfil: ['Hijos en el hogar: 2', 'Zona: alrededores de la ciudad', 'Segmento de procedencia: C'],
-      hist: [h(-6, 11, 'sys', 'Lead recibido: Renting Qashqai (Web / Renting otoño 2026)', 'Sistema'), h(-6, 12, 'llamada', 'Llamada · Contactado · Detectadas necesidades — Quiere híbrido, familia con 2 niños, entrega antes de Navidad'), h(-3, 17, 'prueba', 'Prueba dinámica realizada · Le encaja el maletero'), h(-3, 18, 'sys', 'Estado: Preventa → Caliente', 'Sistema')] }),
-    mkClient({ n: 2, trat: 'Sr.', nombre: 'Bruno Salazar Quintana', estado: 'PRE', modelo: 'Juke', origenes: [org('Exposición', 'Sin campaña', 'Oferta VN', -2)], dirs: [dir('Avenida', 'de los Tilos', '4', '', 'Villaejemplo')],
+      hist: [h(-6, 11, 'sys', 'Lead recibido: Renting Tucson (Web / Renting otoño 2026)', 'Sistema'), h(-6, 12, 'llamada', 'Llamada · Contactado · Detectadas necesidades — Quiere híbrido, familia con 2 niños, entrega antes de Navidad'), h(-3, 17, 'prueba', 'Prueba dinámica realizada · Le encaja el maletero'), h(-3, 18, 'sys', 'Estado: Preventa → Caliente', 'Sistema')] }),
+    mkClient({ n: 2, trat: 'Sr.', nombre: 'Bruno Salazar Quintana', estado: 'PRE', modelo: 'Kona', origenes: [org('Exposición', 'Sin campaña', 'Oferta VN', -2)], dirs: [dir('Avenida', 'de los Tilos', '4', '', 'Villaejemplo')],
       hist: [h(-2, 18, 'visita', 'Visita exposición · Contactado · Presentación del vehículo — Vuelve el sábado acompañado')] }),
-    mkClient({ n: 3, trat: 'Sra.', nombre: 'Celia Vázquez Toledo', estado: 'PRE', modelo: 'Ariya', dni: '00000002W', origenes: [org('Evento', 'Feria del eléctrico 2026', 'Prueba de vehículo', -9)],
-      hist: [h(-9, 13, 'sys', 'Alta desde evento: Feria del eléctrico 2026', 'Sistema'), h(-8, 10, 'email', 'Email · Oferta Ariya enviada')] }),
-    mkClient({ n: 4, owner: 'u2', tipo: 'Empresa', nombre: 'Logística Meridiano SL', estado: 'CAL', modelo: 'Townstar', dni: 'B00000004', origenes: [org('Teléfono', 'Sin campaña', 'Oferta VN', -5)], dirs: [dir('Carretera', 'del Polígono', 'km 2', 'Nave 7', 'Prado Ficticio')],
+    mkClient({ n: 3, trat: 'Sra.', nombre: 'Celia Vázquez Toledo', estado: 'PRE', modelo: 'IONIQ 5', dni: '00000002W', origenes: [org('Evento', 'Feria del eléctrico 2026', 'Prueba de vehículo', -9)],
+      hist: [h(-9, 13, 'sys', 'Alta desde evento: Feria del eléctrico 2026', 'Sistema'), h(-8, 10, 'email', 'Email · Oferta IONIQ 5 enviada')] }),
+    mkClient({ n: 4, owner: 'u2', tipo: 'Empresa', nombre: 'Logística Meridiano SL', estado: 'CAL', modelo: 'Staria', dni: 'B00000004', origenes: [org('Teléfono', 'Sin campaña', 'Oferta VN', -5)], dirs: [dir('Carretera', 'del Polígono', 'km 2', 'Nave 7', 'Prado Ficticio')],
       empresa: ['Persona de contacto: responsable de flota (ficticio)'], flota: ['3 furgonetas de otra marca, renovación prevista en 2027'],
       medios: [{ tipo: 'Teléfono trabajo', valor: '600 000 104', principal: true, franja: 'Mañanas (9 a 14)' }, { tipo: 'Email trabajo', valor: 'flota@empresa-ejemplo.com', principal: true, franja: 'Cualquier hora' }],
       hist: [h(-5, 9, 'llamada', 'Llamada · Contactado · Forma de pago — 3 furgonetas, renting a 48 meses'), h(-1, 16, 'email', 'Email · Propuesta de flota enviada')] }),
-    mkClient({ n: 5, trat: 'Sr.', nombre: 'Darío Esteve Montoro', estado: 'CAR', modelo: 'X-Trail', origenes: [org('Referido', 'Sin campaña', 'Oferta VN', -20)], flota: ['X-Trail en pedido, pendiente de entrega'],
+    mkClient({ n: 5, trat: 'Sr.', nombre: 'Darío Esteve Montoro', estado: 'CAR', modelo: 'Santa Fe', origenes: [org('Referido', 'Sin campaña', 'Oferta VN', -20)], flota: ['Santa Fe en pedido, pendiente de entrega'],
       hist: [h(-15, 12, 'sys', 'Pedido emitido', 'Sistema'), h(-2, 11, 'sys', 'Vehículo recibido en el concesionario', 'Sistema')] }),
-    mkClient({ n: 6, owner: 'u3', trat: 'Sra.', nombre: 'Eva Cordero Lamas', estado: 'SE1', modelo: 'Micra', origenes: [org('Web', 'Sin campaña', 'Oferta VN', -12)], publi: false,
-      hist: [h(-12, 10, 'email', 'Email · Oferta Micra enviada'), h(-7, 12, 'llamada', 'Llamada · No contesta')] }),
-    mkClient({ n: 7, trat: 'Sr.', nombre: 'Fabián Robles Arenas', estado: 'PRE', modelo: 'Leaf', origenes: [org('Redes sociales', 'Feria del eléctrico 2026', 'Prueba de vehículo', -4)], firma: null,
-      hist: [h(-4, 19, 'sys', 'Lead recibido: prueba Leaf (Redes sociales)', 'Sistema')] }),
+    mkClient({ n: 6, owner: 'u3', trat: 'Sra.', nombre: 'Eva Cordero Lamas', estado: 'SE1', modelo: 'i10', origenes: [org('Web', 'Sin campaña', 'Oferta VN', -12)], publi: false,
+      hist: [h(-12, 10, 'email', 'Email · Oferta i10 enviada'), h(-7, 12, 'llamada', 'Llamada · No contesta')] }),
+    mkClient({ n: 7, trat: 'Sr.', nombre: 'Fabián Robles Arenas', estado: 'PRE', modelo: 'INSTER', origenes: [org('Redes sociales', 'Feria del eléctrico 2026', 'Prueba de vehículo', -4)], firma: null,
+      hist: [h(-4, 19, 'sys', 'Lead recibido: prueba INSTER (Redes sociales)', 'Sistema')] }),
     mkClient({ n: 8, trat: 'Sra.', nombre: 'Gema Torrado Sierra', estado: 'PRO', origenes: [org('Taller', 'Sin campaña', 'Información', -20)], usados: ['Coche actual de 11 años, pasa revisiones en nuestro taller'],
       hist: [h(-20, 9, 'sys', 'Alta desde taller: su coche tiene 11 años', 'Sistema')] }),
-    mkClient({ n: 9, owner: 'u2', tipo: 'Empresa', nombre: 'Talleres Horizonte SL', estado: 'SE2', modelo: 'Townstar', origenes: [org('Web', 'Sin campaña', 'Oferta VN', -30)],
+    mkClient({ n: 9, owner: 'u2', tipo: 'Empresa', nombre: 'Talleres Horizonte SL', estado: 'SE2', modelo: 'Staria', origenes: [org('Web', 'Sin campaña', 'Oferta VN', -30)],
       medios: [{ tipo: 'Teléfono trabajo', valor: '600 000 109', principal: true, franja: 'Cualquier hora' }],
       hist: [h(-30, 10, 'email', 'Email · Oferta de 2 unidades enviada'), h(-14, 11, 'llamada', 'Llamada · Contactado · Aplaza a enero')] }),
-    mkClient({ n: 10, owner: 'u3', trat: 'Sr.', nombre: 'Hugo Barrera Olmos', estado: 'NOC', modelo: 'Qashqai', motivo: 'Precio', origenes: [org('Web', 'Sin campaña', 'Oferta VN', -40)],
+    mkClient({ n: 10, owner: 'u3', trat: 'Sr.', nombre: 'Hugo Barrera Olmos', estado: 'NOC', modelo: 'Tucson', motivo: 'Precio', origenes: [org('Web', 'Sin campaña', 'Oferta VN', -40)],
       hist: [h(-25, 12, 'sys', 'Estado: Caliente → No compra · Motivo: Precio', 'Sistema')] }),
-    mkClient({ n: 11, trat: 'Sra.', nombre: 'Inés Calatrava Peral', estado: 'EXCL', modelo: 'Juke', origenes: [org('Exposición', 'Sin campaña', 'Oferta VN', -220)], flota: ['Juke híbrido comprado en el concesionario'], cuest: ['Encuesta de entrega: muy satisfecha'],
-      hist: [h(-200, 12, 'entrega', 'Entrega realizada · Juke híbrido')] }),
-    mkClient({ n: 12, owner: 'u3', trat: 'Sr.', nombre: 'Jorge Valcárcel Rey', estado: 'CAL', modelo: 'X-Trail', origenes: [org('Teléfono', 'Sin campaña', 'Tasación', -3)], usados: ['Coche actual pendiente de tasación'],
+    mkClient({ n: 11, trat: 'Sra.', nombre: 'Inés Calatrava Peral', estado: 'EXCL', modelo: 'Kona', origenes: [org('Exposición', 'Sin campaña', 'Oferta VN', -220)], flota: ['Kona híbrido comprado en el concesionario'], cuest: ['Encuesta de entrega: muy satisfecha'],
+      hist: [h(-200, 12, 'entrega', 'Entrega realizada · Kona híbrido')] }),
+    mkClient({ n: 12, owner: 'u3', trat: 'Sr.', nombre: 'Jorge Valcárcel Rey', estado: 'CAL', modelo: 'Santa Fe', origenes: [org('Teléfono', 'Sin campaña', 'Tasación', -3)], usados: ['Coche actual pendiente de tasación'],
       hist: [h(-1, 13, 'llamada', 'Llamada · Contactado · Propuesta de cierre — Espera la tasación de su coche actual')] })
   ];
   const it = (cid, tipo, f, nota) => ({ id: nid('i'), cid, tipo, f, nota: nota || '', done: false });
   const items = [
     it('c6', 'llamada', D(-1, 12), 'Segunda llamada tras la oferta'),
-    it('c3', 'llamada', D(-1, 16), 'Resolver sus dudas sobre la oferta Ariya'),
+    it('c3', 'llamada', D(-1, 16), 'Resolver sus dudas sobre la oferta IONIQ 5'),
     it('c12', 'llamada', D(0, 9, 30), 'Darle el valor de tasación'),
     it('c1', 'whatsapp', D(0, 11), 'Enviar configuración final y cuota'),
     it('c4', 'llamada', D(0, 12, 30), 'Respuesta a la propuesta de flota'),
     it('c2', 'visita', D(0, 17), 'Vuelve acompañado'),
-    it('c5', 'entrega', D(0, 19), 'Entrega X-Trail en exposición'),
-    it('c3', 'llamada', D(1, 10), 'Seguimiento de la oferta Ariya'),
+    it('c5', 'entrega', D(0, 19), 'Entrega Santa Fe en exposición'),
+    it('c3', 'llamada', D(1, 10), 'Seguimiento de la oferta IONIQ 5'),
     it('c1', 'prueba', D(2, 11), 'Prueba con la versión e-Power'),
     it('c9', 'llamada', D(3, 10), 'Confirmar si retoma en enero'),
     it('c10', 'llamada', D(60, 10), 'Recuperación: nueva campaña'),
     it('c11', 'llamada', D(5, 12), 'Revisión de satisfacción a los 6 meses'),
-    it('c8', 'prueba', D(4, 18), 'Prueba Qashqai')
+    it('c8', 'prueba', D(4, 18), 'Prueba Tucson')
   ];
   const leads = [
-    { id: 'l1', nombre: 'Lidia Montes Abril', tel: '600 000 121', canal: 'Web', campana: 'Renting otoño 2026', peticion: 'Renting', modelo: 'Qashqai', rec: ago(12), estado: 'nuevo', cid: null },
-    { id: 'l2', nombre: 'Mario Cuesta Linares', tel: '600 000 122', canal: 'Redes sociales', campana: 'Feria del eléctrico 2026', peticion: 'Prueba de vehículo', modelo: 'Ariya', rec: ago(55), estado: 'nuevo', cid: null },
-    { id: 'l3', nombre: 'Noelia Garrido Pons', tel: '600 000 123', canal: 'Web', campana: 'Sin campaña', peticion: 'Tasación', modelo: 'Juke', rec: ago(190), estado: 'nuevo', cid: null },
-    { id: 'l4', nombre: 'Celia Vázquez Toledo', tel: '600 000 103', canal: 'Web', campana: 'Feria del eléctrico 2026', peticion: 'Oferta VN', modelo: 'Ariya', rec: ago(60 * 26), estado: 'nuevo', cid: null },
-    { id: 'l5', nombre: 'Fabián Robles Arenas', tel: '600 000 107', canal: 'Redes sociales', campana: 'Feria del eléctrico 2026', peticion: 'Prueba de vehículo', modelo: 'Leaf', rec: ago(60 * 24 * 4), estado: 'atendido', cid: 'c7' }
+    { id: 'l1', nombre: 'Lidia Montes Abril', tel: '600 000 121', canal: 'Web', campana: 'Renting otoño 2026', peticion: 'Renting', modelo: 'Tucson', rec: ago(12), estado: 'nuevo', cid: null },
+    { id: 'l2', nombre: 'Mario Cuesta Linares', tel: '600 000 122', canal: 'Redes sociales', campana: 'Feria del eléctrico 2026', peticion: 'Prueba de vehículo', modelo: 'IONIQ 5', rec: ago(55), estado: 'nuevo', cid: null },
+    { id: 'l3', nombre: 'Noelia Garrido Pons', tel: '600 000 123', canal: 'Web', campana: 'Sin campaña', peticion: 'Tasación', modelo: 'Kona', rec: ago(190), estado: 'nuevo', cid: null },
+    { id: 'l4', nombre: 'Celia Vázquez Toledo', tel: '600 000 103', canal: 'Web', campana: 'Feria del eléctrico 2026', peticion: 'Oferta VN', modelo: 'IONIQ 5', rec: ago(60 * 26), estado: 'nuevo', cid: null },
+    { id: 'l5', nombre: 'Fabián Robles Arenas', tel: '600 000 107', canal: 'Redes sociales', campana: 'Feria del eléctrico 2026', peticion: 'Prueba de vehículo', modelo: 'INSTER', rec: ago(60 * 24 * 4), estado: 'atendido', cid: 'c7' }
   ];
   S = { me: 'u0', users: seedUsers(), verDe: 'todos', view: 'hoy', prev: 'hoy', cid: null, ftab: 'contacto', q: '', cfilter: 'todos', cmode: 'lista', lfilter: 'nuevo', ag: { mode: 'semana', date: sod(now()), f: 'todo' },
     secs: { contacto: true, personales: true, rgpd: true, empresa: false, flota: false, historica: false, usados: false, perfil: false, cuest: false, interno: true },
@@ -818,7 +834,7 @@ function vEmbudo() {
   }).join('') + '</div>';
 }
 
-// ---------- vista: Ficha (por secciones, como la herramienta actual) ----------
+// ---------- vista: Ficha (por secciones) ----------
 function sbar(key, title, count) {
   const open = S.secs[key];
   const cnt = count === undefined ? '' : ' <span class="cnt">(' + (count ? count : 'sin datos') + ')</span>';
@@ -841,7 +857,7 @@ function editor(c, key) {
   if (key === 'p:civil' || key === 'p:prof') return '<div class="editbox"><select id="e-sel" data-in="e.v"><option value="">Sin indicar</option>' + opts(key === 'p:civil' ? CIVIL : PROF, d.v) + '</select>' + editActs(false) + '</div>';
   if (key === 'i:owner') return '<div class="editbox"><select id="e-own" data-in="e.v">' + userOpts(d.v) + '</select>' + editActs(false) + '</div>';
   if (key === 'i:sede') return '<div class="editbox"><select id="e-sede" data-in="e.v">' + opts(SEDES, d.v) + '</select>' + editActs(false) + '</div>';
-  if (key === 'i:modelo') return '<div class="editbox"><select id="e-mod" data-in="e.v">' + opts(MODELOS, d.v) + '</select>' + editActs(false) + '</div>';
+  if (key === 'i:modelo') return '<div class="editbox"><select id="e-mod" data-in="e.v">' + modelOpts(d.v) + '</select>' + editActs(false) + '</div>';
   return '';
 }
 function isEditing(key) { return S.edit && S.edit.cid === S.cid && S.edit.key === key; }
@@ -1043,7 +1059,7 @@ function vNuevo() {
   h += sbar('n_interno', 'Otros datos del contacto');
   h += '<div class="sbody"><div class="frow">' + fld('n-own', 'Comercial asignado', '<select id="n-own" data-in="n.owner">' + userOpts(n.owner || S.me) + '</select>') + fld('n-sede', 'Exposición', sel('n-sede', 'sede', SEDES, n.sede)) +
     fld('n-est', 'Estado inicial', '<select id="n-est" data-in="n.estado"><option value="PRO"' + (n.estado === 'PRO' ? ' selected' : '') + '>PRO · Prospecto</option><option value="PRE"' + (n.estado === 'PRE' ? ' selected' : '') + '>PRE · Preventa</option></select>') +
-    fld('n-mod', 'Modelo de interés', sel('n-mod', 'modelo', MODELOS, n.modelo)) + '</div></div>';
+    fld('n-mod', 'Modelo de interés', '<select id="n-mod" data-in="n.modelo">' + modelOpts(n.modelo) + '</select>') + '</div></div>';
   h += '<div class="formfoot"><span class="meta">Al crear el cliente se abre la planificación: ningún cliente queda sin próxima acción.</span><button class="btn" data-act="nclear" type="button">Vaciar</button><button class="btn pri" type="submit">Crear y planificar la primera acción</button></div></form>';
   return h.replace(/data-act="tsec" data-v="n_[a-z]+"/g, 'data-act="noop"').replace(/ closed"/g, '"');
 }
@@ -1400,7 +1416,7 @@ function buildRecords() {
     const rg = r.rgpd === undefined ? RGPD[3] : yes(r.rgpd) ? RGPD[0] : no(r.rgpd) ? RGPD[1] : RGPD[3];
     const rec = { line, errors, warns, tipo, trat, nombre, medios, dni: dn ? dn.v : '', nacimiento, dirs, estado, rgpd: rg,
       canal: matchCat(CANALES, r.canal) || (r.canal ? fixCase(r.canal) : o.canal), campana: r.campana ? (matchCat(CAMPANAS, r.campana) || r.campana.trim()) : o.campana,
-      motivo: matchCat(MOTIVOS, r.motivo) || (r.motivo ? r.motivo.trim() : 'Información'), modelo: matchCat(MODELOS, r.modelo) || (r.modelo ? fixCase(r.modelo) : 'Sin decidir'),
+      motivo: matchCat(MOTIVOS, r.motivo) || (r.motivo ? r.motivo.trim() : 'Información'), modelo: matchCat(modelNames(), r.modelo) || (r.modelo ? fixCase(r.modelo) : 'Sin decidir'),
       owner: (r.owner && (S.users.find(u => normKey(u.nombre).includes(normKey(r.owner))) || {}).id) || o.owner || S.me, sede: (r.sede && matchCat(SEDES, r.sede)) || o.sede, nota: (r.nota || '').trim() };
     if (!errors.length) {
       const tels = medios.filter(m => isTel(m.tipo)).map(m => normTel(m.valor)), mails = medios.filter(m => !isTel(m.tipo)).map(m => m.valor);
@@ -1495,7 +1511,7 @@ function doExport() {
   else { if (typeof XLSX === 'undefined') { toast('No se ha podido cargar Excel: exporta en CSV'); return; } saveFile(base + '.xlsx', toXlsx(rows, e.what === 'agenda' ? 'Agenda' : 'Clientes'), ''); }
 }
 function plantilla() {
-  const rows = [{ 'Nombre': 'Ejemplo', 'Primer apellido': 'Ficticio', 'Segundo apellido': 'Prueba', 'Tratamiento': 'Sr.', 'Empresa': '', 'Teléfono móvil': '600 000 000', 'Teléfono': '', 'Email': 'ejemplo@ejemplo.com', 'DNI': '', 'Fecha de nacimiento': '01/01/1980', 'Dirección': 'Calle Mayor', 'Número': '1', 'Piso y letra': '2º A', 'Código postal': '00001', 'Localidad': 'Villaejemplo', 'Provincia': 'Provincia Demo', 'Estado': 'PRE', 'Canal': 'Exposición', 'Campaña': '', 'Origen de la negociación': 'Oferta VN', 'Modelo de interés': 'Qashqai', 'Comercial': '', 'Acepta RGPD': 'Sí', 'Comentario': 'Fila de ejemplo: bórrala antes de importar' }];
+  const rows = [{ 'Nombre': 'Ejemplo', 'Primer apellido': 'Ficticio', 'Segundo apellido': 'Prueba', 'Tratamiento': 'Sr.', 'Empresa': '', 'Teléfono móvil': '600 000 000', 'Teléfono': '', 'Email': 'ejemplo@ejemplo.com', 'DNI': '', 'Fecha de nacimiento': '01/01/1980', 'Dirección': 'Calle Mayor', 'Número': '1', 'Piso y letra': '2º A', 'Código postal': '00001', 'Localidad': 'Villaejemplo', 'Provincia': 'Provincia Demo', 'Estado': 'PRE', 'Canal': 'Exposición', 'Campaña': '', 'Origen de la negociación': 'Oferta VN', 'Modelo de interés': 'Tucson', 'Comercial': '', 'Acepta RGPD': 'Sí', 'Comentario': 'Fila de ejemplo: bórrala antes de importar' }];
   saveFile('plantilla-importacion-alfa-crm.csv', toCsv(rows), 'text/csv');
 }
 function reviveBackup(o) {
@@ -1771,7 +1787,7 @@ const planAsig = (sh, c) => {
   return sh.mode === 'mover' ? itemOwner(S.items.find(i => i.id === sh.itemId)) : c.owner;
 };
 const asigField = (v, key) => isJefe()
-  ? '<div class="fld"><label for="asig-sel">Asignada a</label><select id="asig-sel" data-in="' + key + '">' + userOpts(v) + '</select></div>'
+  ? '<div class="fld"><label for="asig-sel">Asignada a <span class="meta">(por defecto, el comercial del cliente; puedes cambiarlo)</span></label><select id="asig-sel" data-in="' + key + '">' + userOpts(v) + '</select></div>'
   : '<p class="meta" style="margin:0">Asignada a: <b>' + esc(uname(v)) + '</b></p>';
 
 // ---------- vacaciones ----------
@@ -1975,8 +1991,9 @@ function openCita(preset, itemId) {
 function citaWhen(f) { if (!f.date || !f.time) return null; const p = f.time.split(':').map(Number), d = new Date(f.date + 'T00:00'); d.setHours(p[0], p[1], 0, 0); return d; }
 function pickList(q) {
   const t = q.trim().toLowerCase(), td = normTel(q);
+  const deQuien = c => isJefe() ? ' · <span class="own">' + esc(uname(c.owner)) + '</span>' : '';
   const l = (isJefe() ? S.clients : scoped()).filter(c => !t || c.nombre.toLowerCase().includes(t) || (td.length >= 3 && telsOf(c).some(x => x.includes(td)))).sort((a, b) => a.nombre.localeCompare(b.nombre)).slice(0, 6);
-  return l.length ? l.map(c => '<button class="pick" data-act="cpick" data-v="' + c.id + '" type="button">' + stChip(c.estado) + '<span><b>' + esc(c.nombre) + '</b><small>' + esc(telOf(c)) + ' · ' + esc(c.modelo) + '</small></span></button>').join('') : '<div class="meta">Ningún cliente coincide. Puedes apuntarlo a mano en "Persona nueva".</div>';
+  return l.length ? l.map(c => '<button class="pick" data-act="cpick" data-v="' + c.id + '" type="button">' + stChip(c.estado) + '<span><b>' + esc(c.nombre) + '</b><small>' + esc(telOf(c)) + ' · ' + esc(c.modelo) + deQuien(c) + '</small></span></button>').join('') : '<div class="meta">Ningún cliente coincide. Puedes apuntarlo a mano en "Persona nueva".</div>';
 }
 function citaHtml() {
   const sh = S.sheet, f = sh.f, d = citaWhen(f);
@@ -1985,7 +2002,7 @@ function citaHtml() {
   let who = '<div class="seg"><button type="button" class="' + (f.who === 'cliente' ? 'on' : '') + '" data-act="cwho" data-v="cliente">Cliente existente</button><button type="button" class="' + (f.who === 'manual' ? 'on' : '') + '" data-act="cwho" data-v="manual">Persona nueva</button><button type="button" class="' + (f.who === 'sin' ? 'on' : '') + '" data-act="cwho" data-v="sin">Sin cliente</button></div>';
   if (f.who === 'cliente') {
     const c = f.cid ? client(f.cid) : null;
-    who += c ? '<div class="pick on">' + stChip(c.estado) + '<span><b>' + esc(c.nombre) + '</b><small>' + esc(telOf(c)) + ' · ' + esc(c.modelo) + '</small></span><button class="btn sm" data-act="cclear" type="button">Cambiar</button></div>'
+    who += c ? '<div class="pick on">' + stChip(c.estado) + '<span><b>' + esc(c.nombre) + '</b><small>' + esc(telOf(c)) + ' · ' + esc(c.modelo) + (isJefe() ? ' · Comercial: <span class="own">' + esc(uname(c.owner)) + '</span>' : '') + '</small></span><button class="btn sm" data-act="cclear" type="button">Cambiar</button></div>'
       : '<label class="search" for="c-q">' + ic('search') + '<input id="c-q" data-in="s.q" type="search" placeholder="Busca por nombre o teléfono" value="' + esc(f.q) + '" autocomplete="off"></label><div class="pickres" id="c-res">' + pickList(f.q) + '</div>';
   } else if (f.who === 'manual') {
     const dup = findByTel(f.cTel);
@@ -2000,11 +2017,11 @@ function citaHtml() {
   const asig = citaAsig(f), vac = d && onVacation(asig, d);
   const body = '<div class="fld"><span class="lb">Qué *</span>' + chipSet('tipo', ALL_TYPES, f.tipo) + '</div>' +
     '<div class="fld"><span class="lb">Con quién *</span>' + who + '</div>' +
+    asigField(asig, 's.asig') + (vac ? vacAlert(asig, vac) : '') +
     '<div class="frow"><div class="fld"><label for="c-date">Fecha *</label><input type="date" id="c-date" data-in="s.date" value="' + esc(f.date) + '"></div>' +
     '<div class="fld"><label for="c-time">Hora *</label><select id="c-time" data-in="s.time">' + times.map(t => '<option' + (t === f.time ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></div>' +
     '<div class="fld"><label for="c-dur">Duración</label><select id="c-dur" data-in="s.dur">' + [['15', '15 min'], ['30', '30 min'], ['45', '45 min'], ['60', '1 hora'], ['90', '1 h 30 min'], ['120', '2 horas']].map(o => '<option value="' + o[0] + '"' + (o[0] === f.dur ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></div></div>' +
     '<div class="fld"><label for="c-nota">Nota</label><input id="c-nota" data-in="s.nota" value="' + esc(f.nota) + '" placeholder="Ej.: llevar la oferta impresa" autocomplete="off"></div>' +
-    asigField(asig, 's.asig') + (vac ? vacAlert(asig, vac) : '') +
     '<div class="meta">' + (d ? (past ? '<span style="color:var(--bad)">Esa fecha y hora ya han pasado.</span>' : 'Quedará en la agenda: <b>' + esc(when(d)) + '</b>') : 'Elige fecha y hora.') + '</div>';
   const foot = (sh.itemId ? '<button class="btn danger" data-act="cdel" type="button">Eliminar</button>' : '') + '<button class="btn" data-act="sclose" type="button">Cancelar</button><button class="btn pri" data-act="csave" type="button"' + (f.tipo && okWho && d && !past && !vac ? '' : ' disabled') + '>' + (sh.itemId ? 'Guardar cambios' : 'Añadir a la agenda') + '</button>';
   return sheetFrame(sh.itemId ? 'Editar cita' : 'Nueva cita', 'Agenda manual', body, foot);
@@ -2167,6 +2184,23 @@ const H = {
   vacdel: v => { const x = S.vacs.find(y => y.id === v); if (!x || !canEditVac(x)) return; S.vacs = S.vacs.filter(y => y !== x); toast('Vacaciones eliminadas'); render(); },
   vacback: () => { S.sheet.f = null; renderSheet(); },
   vacsave: () => saveVac(),
+  catmarca: () => {
+    if (!canAdmin()) return;
+    const el = $('cat-marca'), n = (el && el.value || '').trim();
+    if (!n) { toast('Escribe el nombre de la marca'); return; }
+    if (CAT.marcas.some(k => k.nombre.toLowerCase() === n.toLowerCase())) { toast('Esa marca ya existe'); return; }
+    CAT.marcas.push({ id: 'mk' + (++uid), nombre: n, activo: true }); toast('Marca añadida: ' + n + '. Ahora añádele sus modelos.'); render();
+  },
+  catmodelo: () => {
+    if (!canAdmin()) return;
+    const el = $('cat-modelo'), n = (el && el.value || '').trim(), mk = ($('cat-marca-sel') || {}).value;
+    if (!mk) { toast('Primero añade o activa una marca'); return; }
+    if (!n) { toast('Escribe el nombre del modelo'); return; }
+    if (CAT.modelos.some(m => m.marca === mk && m.nombre.toLowerCase() === n.toLowerCase())) { toast('Ese modelo ya existe en esa marca'); return; }
+    CAT.modelos.push({ id: 'md' + (++uid), marca: mk, nombre: n, activo: true }); toast('Modelo añadido: ' + n); render();
+  },
+  cattog: v => { if (!canAdmin()) return; const m = CAT.modelos.find(x => x.id === v); if (m) { m.activo = !m.activo; toast(m.nombre + (m.activo ? ' activado' : ' desactivado')); render(); } },
+  catmtog: v => { if (!canAdmin()) return; const k = CAT.marcas.find(x => x.id === v); if (k) { k.activo = !k.activo; toast('Marca ' + k.nombre + (k.activo ? ' activada' : ' desactivada')); render(); } },
   avisook: v => { const a = S.avisos.find(x => x.id === v); if (a) a.leido = true; render(); },
   hper: v => { S.hq.per = v; render(); },
   hnav: v => { const d = new Date(S.hq.ref + 'T00:00'), k = +v, p = S.hq.per; if (!k) S.hq.ref = isoDay(now()); else { if (p === 'dia') d.setDate(d.getDate() + k); else if (p === 'semana') d.setDate(d.getDate() + 7 * k); else if (p === 'mes') d.setMonth(d.getMonth() + k); else d.setFullYear(d.getFullYear() + k); S.hq.ref = isoDay(d); } render(); },
@@ -2352,6 +2386,20 @@ async function askMic() {
   }
   renderContent();
 }
+function catPanel() {
+  const marcas = CAT.marcas.map(k => {
+    const ms = CAT.modelos.filter(m => m.marca === k.id);
+    return '<div class="stack" style="gap:6px"><div class="toolbar"><b>' + esc(k.nombre) + '</b>' + (k.activo ? '' : '<span class="sla bad" style="font-size:12px">Desactivada</span>') +
+      '<button class="btn sm" data-act="catmtog" data-v="' + k.id + '" type="button">' + (k.activo ? 'Desactivar marca' : 'Activar marca') + '</button></div>' +
+      '<div class="chips" style="flex-wrap:wrap">' + (ms.length ? ms.map(m => '<button class="chip' + (m.activo ? ' on' : '') + '" data-act="cattog" data-v="' + m.id + '" type="button" title="' + (m.activo ? 'Pulsa para desactivarlo' : 'Pulsa para activarlo') + '"' + (m.activo ? '' : ' style="text-decoration:line-through;opacity:.6"') + '>' + esc(m.nombre) + '</button>').join('') : '<span class="meta">Sin modelos todavía.</span>') + '</div></div>';
+  }).join('');
+  return '<div class="panel stack"><h3 class="sec">Marcas y modelos</h3>' +
+    '<p class="meta" style="margin:0">Los modelos activos son los que se eligen en las fichas, los leads y la importación. Desactivar no borra nada: los clientes que ya lo tienen lo conservan. Pulsa un modelo para activarlo o desactivarlo.</p>' + marcas +
+    '<div class="two"><div class="fld"><label for="cat-marca-sel">Marca del modelo nuevo</label><select id="cat-marca-sel">' + CAT.marcas.filter(k => k.activo).map(k => '<option value="' + k.id + '">' + esc(k.nombre) + '</option>').join('') + '</select></div>' +
+    '<div class="fld"><label for="cat-modelo">Modelo nuevo</label><input id="cat-modelo" placeholder="Ej.: IONIQ 9" autocomplete="off"></div></div>' +
+    '<div class="chips"><button class="btn pri" data-act="catmodelo" type="button">Añadir modelo</button></div>' +
+    '<div class="two"><div class="fld"><label for="cat-marca">Marca nueva</label><input id="cat-marca" placeholder="Nombre de la marca" autocomplete="off"></div><div class="fld" style="justify-content:end"><button class="btn" data-act="catmarca" type="button">Añadir marca</button></div></div></div>';
+}
 function vAjustes() {
   const est = {
     granted: ['ok', 'Permitido', 'El dictado por voz está listo.'],
@@ -2363,6 +2411,7 @@ function vAjustes() {
   }[MICPERM] || ['warn', 'Sin comprobar', ''];
   let h = '<div class="chips mobonly" style="flex-wrap:wrap"><button class="btn" data-act="dtab" data-v="imp" type="button">' + ic('db', 18) + 'Importar / exportar</button>' + (canAdmin() ? '<button class="btn" data-act="go" data-v="usuarios" type="button">' + ic('shield', 18) + 'Usuarios</button>' : '') + '</div>';
   h += '<div class="cols2"><div class="stack">';
+  if (canAdmin()) h += catPanel();
   h += '<div class="panel stack"><h3 class="sec">Tus datos</h3><p style="margin:0">' + (STORE_OK ? 'Todo lo que haces se guarda automáticamente <b>en este navegador</b>' + (LAST_SAVE ? ' (último guardado: ' + esc(when(LAST_SAVE)) + ')' : '') + '.' : '<b style="color:var(--bad)">Este navegador no permite guardar</b>: lo que hagas se perderá al cerrar. Descarga una copia antes de salir.') + '</p>' +
     '<ul class="tips"><li>Solo lo ves tú, en este dispositivo y este navegador: no se comparte con el equipo.</li><li>Si borras los datos de navegación o usas una ventana de incógnito, se pierde. Descarga una copia de vez en cuando.</li><li>No metas clientes reales en esta demostración. En la aplicación definitiva los datos se guardarán en un servidor y los verá el equipo según su rol.</li></ul>' +
     '<div class="chips"><button class="btn pri" data-act="xcopia" type="button">' + ic('download', 18) + 'Descargar copia de mis datos</button><button class="btn" data-act="dtab" data-v="imp" type="button">Restaurar una copia</button><button class="btn danger" data-act="reset" type="button">Borrar mis datos</button></div></div>';
@@ -2480,7 +2529,7 @@ let STORE_OK = true, LAST_SAVE = null;
 const savedTxt = () => STORE_OK ? (LAST_SAVE ? 'Guardado ' + hm(LAST_SAVE) : 'Guardado automático') : 'Sin guardar';
 function persist() {
   try {
-    localStorage.setItem(DATA_KEY, JSON.stringify({ v: 2, savedAt: new Date().toISOString(), uid, clients: S.clients, items: S.items, leads: S.leads, users: S.users, me: S.me, vacs: S.vacs, avisos: S.avisos }));
+    localStorage.setItem(DATA_KEY, JSON.stringify({ v: 2, savedAt: new Date().toISOString(), uid, clients: S.clients, items: S.items, leads: S.leads, users: S.users, me: S.me, vacs: S.vacs, avisos: S.avisos, cat: CAT }));
     STORE_OK = true; LAST_SAVE = new Date();
   } catch (e) { STORE_OK = false; }
   const el = document.getElementById('savedind');
@@ -2501,6 +2550,11 @@ function loadSaved() {
     if (Array.isArray(o.vacs)) S.vacs = o.vacs;
     if (Array.isArray(o.avisos)) S.avisos = o.avisos.map(a => Object.assign(a, { f: new Date(a.f) }));
     S.clients = S.clients.filter(c => !c.provisional);   // lead abierto y no reportado: no se queda guardado
+    if (o.cat && Array.isArray(o.cat.marcas) && Array.isArray(o.cat.modelos)) CAT = o.cat;
+    const mm = x => MODELOS_ANTERIORES[x] || x, mt = t => typeof t === 'string' ? t.replace(/(?<![\w-])(Qashqai|Juke|X-Trail|Ariya|Leaf|Micra|Townstar)(?![\w-])/g, x => MODELOS_ANTERIORES[x]) : t;
+    S.clients.forEach(c => { c.modelo = mm(c.modelo); (c.hist || []).forEach(e => { e.txt = mt(e.txt); }); c.flota = (c.flota || []).map(mt); });
+    S.items.forEach(i => { i.nota = mt(i.nota); i.titulo = mt(i.titulo); });
+    S.leads.forEach(l => { l.modelo = mm(l.modelo); });
     uid = Math.max(uid, +o.uid || 0);
     LAST_SAVE = new Date(o.savedAt);
     return true;
