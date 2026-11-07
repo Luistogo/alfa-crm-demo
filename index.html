@@ -323,6 +323,15 @@ div.kpi { cursor: default; }
 .panel details .tips { margin-top: 6px; }
 .panel textarea#cfg-test { font-family: var(--f-body); font-size: 15px; }
 .micfield { padding-right: 46px !important; }
+.callbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 12px; align-items: center; background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; }
+.callbar .who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.callnums { display: flex; flex-wrap: wrap; gap: 6px; }
+.callbar a.btn { text-decoration: none; color: var(--ink); background: var(--surface); }
+.vacchip { display: block; font-size: 12px; font-weight: 600; background: var(--warn-soft); color: var(--warn); border-radius: 6px; padding: 4px 8px; }
+.avisos { display: flex; flex-direction: column; gap: 8px; }
+.avisos .alert .tx { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.histtb { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.histtb input[type=date], .histtb select { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
 .cphint { display: block; flex-basis: 100%; font-size: 12.5px; color: var(--muted); line-height: 1.35; }
 .cphint.ok { color: var(--good); } .cphint.warn { color: var(--warn); } .cphint.bad { color: var(--bad); }
 .cphint .chip { padding: 2px 9px; font-size: 12.5px; margin: 3px 4px 0 0; }
@@ -466,6 +475,7 @@ const IC = {
   download: '<path d="M12 4v12M7 11l5 5 5-5M4 20h16"/>',
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'
 };
@@ -642,7 +652,7 @@ function seed() {
   ];
   S = { me: 'u0', users: seedUsers(), verDe: 'todos', view: 'hoy', prev: 'hoy', cid: null, ftab: 'contacto', q: '', cfilter: 'todos', cmode: 'lista', lfilter: 'nuevo', ag: { mode: 'semana', date: sod(now()), f: 'todo' },
     secs: { contacto: true, personales: true, rgpd: true, empresa: false, flota: false, historica: false, usados: false, perfil: false, cuest: false, interno: true },
-    edit: null, clients, items, leads, sheet: null, nuevo: freshNuevo(), dtab: 'imp', imp: freshImp(),
+    edit: null, clients, items, leads, vacs: seedVacs(), avisos: [], hq: { per: 'semana', ref: isoDay(now()), tipo: 'todo', who: 'todos' }, sheet: null, nuevo: freshNuevo(), dtab: 'imp', imp: freshImp(),
     exp: { what: 'clientes', fmt: 'xlsx', filtro: 'todos', personales: true, soloRgpd: false } };
 }
 function freshNuevo() {
@@ -674,7 +684,7 @@ const teamIds = () => S.users.filter(u => u.activo && (u.rol === 'comercial' || 
 const userOpts = v => activeUsers().map(u => '<option value="' + esc(u.id) + '"' + (u.id === v ? ' selected' : '') + '>' + esc(u.nombre) + '</option>').join('');
 const ownerShort = o => String(uname(o)).split(' (')[0];
 const mine = c => isJefe() ? (S.verDe === 'todos' || c.owner === S.verDe) : c.owner === S.me;
-const itemOwner = i => i.cid ? client(i.cid).owner : (i.resp || S.me);
+const itemOwner = i => i.asig || (i.cid ? (client(i.cid) || {}).owner : (i.resp || S.me));
 const mineItem = i => isJefe() ? (S.verDe === 'todos' || itemOwner(i) === S.verDe) : itemOwner(i) === S.me;
 const scoped = () => S.clients.filter(mine);
 const lateItems = () => S.items.filter(i => isLate(i) && mineItem(i)).sort((a, b) => a.f - b.f);
@@ -684,7 +694,7 @@ const noPlan = () => scoped().filter(needsPlan);
 const slaClass = d => { const m = (now() - d) / 60000; return m < 60 ? 'ok' : m < 240 ? 'warn' : 'bad'; };
 const stChip = c => '<span class="st ' + c + '" title="' + esc(stLabel(c)) + '">' + c + '</span>';
 const findByTel = t => { const n = normTel(t); return n.length >= 9 ? S.clients.find(c => telsOf(c).includes(n)) : null; };
-const logChange = (c, label, from, to) => c.hist.push({ f: now(), t: 'sys', txt: 'Contacto modificado: ' + label + " '" + (from || '') + "' cambia por: '" + (to || '') + "'", u: 'Tú' });
+const logChange = (c, label, from, to) => c.hist.push({ f: now(), t: 'sys', txt: 'Contacto modificado: ' + label + " '" + (from || '') + "' cambia por: '" + (to || '') + "'", u: me().nombre, uid: S.me });
 
 // ---------- render: marco ----------
 const $ = id => document.getElementById(id);
@@ -700,7 +710,8 @@ function renderTop() {
     datos: ['Importar / exportar', 'Trae tus clientes desde cualquier programa o sácalos en Excel, CSV o JSON'],
     equipo: ['Equipo e informes', 'Actividad y resultados de cada comercial'],
     ajustes: ['Ajustes', 'Micrófono, dictado por voz y preferencias'],
-    usuarios: ['Usuarios', 'Altas, niveles y permisos del equipo']
+    usuarios: ['Usuarios', 'Altas, niveles y permisos del equipo'],
+    historico: ['Histórico de reportes', 'Lo reportado por día, semana, mes o año']
   }[S.view];
   const back = S.view === 'ficha' ? '<button class="iconbtn" data-act="back" type="button" aria-label="Volver">' + ic('back') + '</button>' : '';
   $('top').innerHTML = back + '<div class="tt"><h2>' + esc(t[0]) + '</h2><small>' + esc(t[1]) + '</small></div>' +
@@ -716,14 +727,14 @@ function renderTabs() {
   const tabs = [['hoy', 'Hoy', 'Hoy', 'home', late], ['clientes', 'Clientes', 'Clientes', 'users', 0], ['leads', 'Leads', 'Leads', 'inbox', nl], ['agenda', 'Agenda', 'Agenda', 'cal', 0]]
     .concat(isJefe() ? [['equipo', 'Equipo e informes', 'Equipo', 'chart', 0]] : [])
     .concat(canAdmin() ? [['usuarios', 'Usuarios', 'Usuarios', 'shield', 0]] : [])
-    .concat([['datos', 'Importar / exportar', 'Datos', 'db', 0], ['ajustes', 'Ajustes', 'Ajustes', 'gear', 0], ['nuevo', 'Nuevo cliente', 'Nuevo', 'plus', 0]]);
+    .concat([['datos', 'Importar / exportar', 'Datos', 'db', 0], ['historico', 'Histórico de reportes', 'Histórico', 'clock', 0], ['ajustes', 'Ajustes', 'Ajustes', 'gear', 0], ['nuevo', 'Nuevo cliente', 'Nuevo', 'plus', 0]]);
   $('who').innerHTML = '<b>' + esc(me().nombre) + '</b><span>' + esc(roleLabel(me())) + ' · ' + (isJefe() ? (S.verDe === 'todos' ? 'todo el equipo' : 'viendo a ' + esc(ownerShort(S.verDe))) : 'su cartera') + '</span>';
   const active = S.view === 'ficha' ? S.prev : S.view;
-  $('tabs').innerHTML = tabs.map(t => '<button class="tab' + (active === t[0] ? ' on' : '') + (t[0] === 'nuevo' ? ' new' : '') + (t[0] === 'ajustes' ? ' cfg' : '') + '" data-act="go" data-v="' + t[0] + '" type="button">' + ic(t[3], 22) +
+  $('tabs').innerHTML = tabs.map(t => '<button class="tab' + (active === t[0] ? ' on' : '') + (t[0] === 'nuevo' ? ' new' : '') + (['ajustes', 'datos', 'usuarios'].includes(t[0]) ? ' cfg' : '') + '" data-act="go" data-v="' + t[0] + '" type="button">' + ic(t[3], 22) +
     '<span class="lbl"><span class="full">' + t[1] + '</span><span class="short">' + t[2] + '</span></span>' + (t[4] ? '<span class="bd">' + t[4] + '</span>' : '') + '</button>').join('');
 }
 function renderContent() {
-  $('content').innerHTML = '<div class="wrapc">' + ({ hoy: vHoy, clientes: vClientes, leads: vLeads, agenda: vAgenda, nuevo: vNuevo, ficha: vFicha, datos: vDatos, equipo: vEquipo, ajustes: vAjustes, usuarios: vUsuarios })[S.view]() + '</div>';
+  $('content').innerHTML = '<div class="wrapc">' + ({ hoy: vHoy, clientes: vClientes, leads: vLeads, agenda: vAgenda, nuevo: vNuevo, ficha: vFicha, datos: vDatos, equipo: vEquipo, ajustes: vAjustes, usuarios: vUsuarios, historico: vHist })[S.view]() + '</div>';
   if (S.view === 'nuevo') dupCheck();
 }
 
@@ -744,7 +755,7 @@ function leadRowMini(o) {
 }
 function vHoy() {
   const late = lateItems(), left = todayLeft(), nl = newLeads(), np = noPlan();
-  let h = '<div class="kpis">' +
+  let h = avisosHtml() + '<div class="kpis">' +
     '<button class="kpi ' + (late.length ? 'bad' : 'ok') + '" data-act="jump" data-v="late" type="button"><b>' + late.length + '</b><span>Vencidas</span></button>' +
     '<button class="kpi" data-act="go" data-v="agenda" type="button"><b>' + left.length + '</b><span>Quedan hoy</span></button>' +
     '<button class="kpi ' + (nl.length ? 'warn' : 'ok') + '" data-act="go" data-v="leads" type="button"><b>' + nl.length + '</b><span>Leads sin atender</span></button>' +
@@ -780,7 +791,7 @@ function filteredClients() {
     if (S.cfilter === 'sinplan') return needsPlan(c);
     if (S.cfilter === 'SE') return /^SE/.test(c.estado);
     return c.estado === S.cfilter;
-  }).sort((a, b) => { const na = nextOf(a.id), nb = nextOf(b.id); return (na ? na.f : 0) - (nb ? nb.f : 0); });
+  }).sort(clientSorter());
 }
 function vClientes() {
   const filters = [['todos', 'Todos'], ['sinplan', 'Sin planificar'], ['PRO', 'PRO'], ['PRE', 'PRE'], ['CAL', 'CAL'], ['CAR', 'CAR'], ['SE', 'SE1–3'], ['NOC', 'NOC'], ['EXCL', 'EXCL']];
@@ -788,6 +799,7 @@ function vClientes() {
   let h = '<div class="toolbar"><div class="seg"><button class="' + (S.cmode === 'lista' ? 'on' : '') + '" data-act="cmode" data-v="lista" type="button">Lista</button><button class="' + (S.cmode === 'embudo' ? 'on' : '') + '" data-act="cmode" data-v="embudo" type="button">Embudo</button></div>';
   if (S.cmode === 'embudo') return h + '</div>' + vEmbudo();
   h += '<label class="search" for="q">' + ic('search') + '<input id="q" data-in="q" type="search" placeholder="Buscar por nombre, teléfono, email o DNI" value="' + esc(S.q) + '" autocomplete="off"></label>';
+  h += sortSelect();
   h += '<button class="btn" data-act="dtab" data-v="imp" type="button">' + ic('upload', 18) + 'Importar</button><button class="btn" data-act="dtab" data-v="exp" type="button">' + ic('download', 18) + 'Exportar</button></div>';
   if (S.cfilter.startsWith('lote:')) filters.unshift([S.cfilter, 'Importados ahora']);
   h += '<div class="chips scroll">' + filters.map(f => '<button class="chip' + (S.cfilter === f[0] ? ' on' : '') + '" data-act="cf" data-v="' + f[0] + '" type="button">' + f[1] + ' <span class="n">' + count(f[0]) + '</span></button>').join('') + '</div>';
@@ -908,7 +920,7 @@ function vFicha() {
   else if (S.ftab === 'neg') {
     h += '<div class="negacts"><button data-act="plan" data-v="' + c.id + '" type="button"><b>' + ic('cal', 18) + 'Planificar</b><span>Próxima acción</span></button><button data-act="quick" data-v="llamada" type="button"><b>' + ic('edit', 18) + 'Reportar</b><span>Algo ya hecho; después pide planificar</span></button><button data-act="quick" data-v="prueba" type="button"><b>' + ic('key', 18) + 'Prueba</b><span>Prueba dinámica</span></button></div>';
     const ev = c.hist.slice().sort((a, b) => b.f - a.f);
-    h += ev.length ? '<div class="tl">' + ev.map(e => { const t = TYPES[e.t]; return '<div class="ev"><div class="dot' + (t ? '' : ' sys') + '">' + ic(t ? t.ic : 'sys', 16) + '</div><div class="tx"><span>' + esc(e.txt) + '</span><small>' + esc(when(e.f)) + ' · ' + esc(e.u) + '</small></div></div>'; }).join('') + '</div>' : '<div class="empty">Sin historial todavía.</div>';
+    h += ev.length ? '<div class="tl">' + ev.map(e => { const t = TYPES[e.t]; return '<div class="ev"><div class="dot' + (t ? '' : ' sys') + '">' + ic(t ? t.ic : 'sys', 16) + '</div><div class="tx"><span>' + esc(e.txt) + '</span><small>' + esc(when(e.f)) + ' · ' + esc(histWho(e, c)) + '</small></div></div>'; }).join('') + '</div>' : '<div class="empty">Sin historial todavía.</div>';
   } else if (S.ftab === 'ofertas') h += '<div class="ph">' + ic('car', 28) + '<br>Ofertas con configurador y PDF.<br><b>Llega en la fase 3.</b></div>';
   else h += '<div class="ph">' + ic('doc', 28) + '<br>Expediente con DNI, pedido y firma digital.<br><b>Llega en la fase 4.</b></div>';
   return h;
@@ -947,10 +959,11 @@ function vAgenda() {
   if (a.mode === 'dia') h += '<div class="daynav"><button class="iconbtn" data-act="agd" data-v="-1" type="button" aria-label="Día anterior">' + ic('left') + '</button><div class="d">' + esc(dayLabel(a.date)) + (Math.abs(dayDiff(a.date)) <= 1 ? ' · ' + a.date.getDate() + ' ' + MON[a.date.getMonth()] : '') + '</div><button class="iconbtn" data-act="agd" data-v="1" type="button" aria-label="Día siguiente">' + ic('right') + '</button></div>';
   else if (a.mode === 'semana') { const b = wk(); h += '<div class="daynav"><button class="iconbtn" data-act="agd" data-v="-7" type="button" aria-label="Semana anterior">' + ic('left') + '</button><div class="d">Semana del ' + b.getDate() + ' ' + MON[b.getMonth()] + '</div><button class="iconbtn" data-act="agd" data-v="7" type="button" aria-label="Semana siguiente">' + ic('right') + '</button></div>'; }
   h += '<button class="btn pri" data-act="newcita" data-v="' + isoDay(a.mode === 'lista' ? now() : a.date) + '|10:00" type="button" style="margin-left:auto">' + ic('plus', 18) + 'Nueva cita</button>';
+  h += '<button class="btn" data-act="vacas" type="button">' + ic('flag', 18) + 'Vacaciones</button>';
   h += '</div><div class="chips scroll">' + fl.map(f => '<button class="chip' + (a.f === f[0] ? ' on' : '') + '" data-act="agf" data-v="' + f[0] + '" type="button">' + f[1] + '</button>').join('') + '</div>';
   if (a.mode === 'dia') {
     const list = agItems(a.date);
-    h += '<p class="meta">Pulsa una hora para apuntar algo a esa hora.</p><div class="hours">';
+    h += vacBanner(a.date) + '<p class="meta">Pulsa una hora para apuntar algo a esa hora.</p><div class="hours">';
     for (let hh = 8; hh <= 21; hh++) {
       const its = list.filter(i => i.f.getHours() === hh), hs = String(hh).padStart(2, '0') + ':00';
       h += '<div class="hr' + (same(a.date, now()) && now().getHours() === hh ? ' now' : '') + '"><button class="h addslot" data-act="newcita" data-v="' + isoDay(a.date) + '|' + hs + '" type="button" aria-label="Nueva cita a las ' + hs + '">' + hs + '<span class="pl">+</span></button><div class="slot">' + its.map(evBlock).join('') + '</div></div>';
@@ -962,7 +975,7 @@ function vAgenda() {
     for (let k = 0; k < 7; k++) {
       const d = new Date(b); d.setDate(b.getDate() + k);
       const its = agItems(d);
-      h += '<div class="wd' + (same(d, now()) ? ' today' : '') + '"><div class="wdh"><button class="dl" data-act="agday" data-v="' + isoDay(d) + '" type="button" aria-label="Ver el día ' + d.getDate() + '"><b>' + d.getDate() + '</b><span>' + DAYS[d.getDay()] + '</span></button><button class="plus" data-act="newcita" data-v="' + isoDay(d) + '|10:00" type="button" aria-label="Nueva cita el día ' + d.getDate() + '">' + ic('plus', 14) + '</button></div><div class="its">' + (its.length ? its.map(evBlock).join('') : '<span class="meta">Libre</span>') + '</div></div>';
+      h += '<div class="wd' + (same(d, now()) ? ' today' : '') + '"><div class="wdh"><button class="dl" data-act="agday" data-v="' + isoDay(d) + '" type="button" aria-label="Ver el día ' + d.getDate() + '"><b>' + d.getDate() + '</b><span>' + DAYS[d.getDay()] + '</span></button><button class="plus" data-act="newcita" data-v="' + isoDay(d) + '|10:00" type="button" aria-label="Nueva cita el día ' + d.getDate() + '">' + ic('plus', 14) + '</button></div><div class="its">' + vacChips(d) + (its.length ? its.map(evBlock).join('') : (vacChips(d) ? '' : '<span class="meta">Libre</span>')) + '</div></div>';
     }
     h += '</div>';
   } else {
@@ -1052,7 +1065,7 @@ function openSheet(mode, cid, itemId, preset) {
   S.sheet = { mode, cid, itemId, step: mode === 'reportar' ? 1 : 2, f: Object.assign({ tipo: it ? it.tipo : '', res: 'Contactado', tareas: [], com: '', estado: c.estado, motivo: '', recontacto: 'si', nTipo: mode === 'mover' && it ? it.tipo : '', nWhen: '', nDate: '', nTime: '10:00', nNota: mode === 'mover' && it ? it.nota : '' }, preset || {}) };
   renderSheet();
 }
-function closeSheet() { S.sheet = null; renderSheet(); }
+function closeSheet() { const sh = S.sheet; S.sheet = null; if (sh && sh.lead) { cancelLead(sh.lead); render(); return; } renderSheet(); }
 function whenDate(f) {
   const p = f.nTime.split(':').map(Number), mk = off => D(off, p[0], p[1]);
   switch (f.nWhen) {
@@ -1076,6 +1089,7 @@ function renderSheet() {
   if (!sh) { root.innerHTML = ''; return; }
   if (sh.mode === 'guia') { root.innerHTML = sheetFrame('Qué probar', 'Prototipo con datos ficticios', $('guide-tpl').innerHTML, ''); return; }
   if (sh.mode === 'usuario') { root.innerHTML = userSheetHtml(); return; }
+  if (sh.mode === 'vacas') { root.innerHTML = vacSheetHtml(); return; }
   if (sh.mode === 'reset') { root.innerHTML = sheetFrame('Borrar mis datos', 'Volver a los datos de ejemplo', '<p style="margin:0">Se borrarán los clientes, citas, reportes y cambios que hayas hecho en este navegador y volverán los datos de ejemplo. <b>No se puede deshacer.</b></p><p class="meta" style="margin:0">Si quieres conservarlos, descarga antes una copia: podrás restaurarla desde Importar / exportar.</p>', '<button class="btn" data-act="xcopia" type="button">Descargar copia</button><button class="btn" data-act="sclose" type="button">Cancelar</button><button class="btn danger" data-act="resetok" type="button">Sí, borrar y reiniciar</button>'); return; }
   if (sh.mode === 'cita') { root.innerHTML = citaHtml(); return; }
   const c = client(sh.cid), f = sh.f;
@@ -1113,6 +1127,7 @@ function renderSheet() {
     const wh = [['hoy', 'Hoy'], ['manana', 'Mañana'], ['3d', 'En 3 días'], ['semana', 'En una semana'], ['3m', 'En 3 meses'], ['otra', 'Otra fecha']];
     const times = []; for (let x = 9; x <= 20; x++) { times.push(String(x).padStart(2, '0') + ':00'); times.push(String(x).padStart(2, '0') + ':30'); }
     const d = whenDate(f);
+    const asig = planAsig(sh, c), vac = d && onVacation(asig, d);
     body = (sh.mode === 'reportar' ? '<div class="steps"><i class="on"></i><i class="on"></i></div>' : '') +
       (sh.mode === 'reportar' || sh.mode === 'alta' ? '<div class="alert warn">' + ic('info') + '<div class="tx">Todo cliente tiene que tener una próxima acción.</div></div>' : '') +
       '<div class="fld"><span class="lb">Qué *</span>' + chipSet('nTipo', tipoOpts, f.nTipo) + '</div>' +
@@ -1121,17 +1136,19 @@ function renderSheet() {
       '<div class="fld"><label for="s-time">Hora</label><select id="s-time" data-in="s.nTime">' + times.map(t => '<option' + (t === f.nTime ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></div></div>' +
       '<div class="fld"><label for="s-nota">Nota para ti</label><input id="s-nota" data-in="s.nNota" value="' + esc(f.nNota) + '" placeholder="Ej.: llevar la tasación"></div>' +
       '<div class="meta">' + (d ? 'Quedará en tu agenda: <b>' + esc(when(d)) + '</b>' : (f.nWhen === 'hoy' || (f.nWhen === 'otra' && f.nDate) ? '<span style="color:var(--bad)">Esa fecha y hora ya han pasado: elige otra.</span>' : f.nWhen === 'otra' ? 'Elige la fecha.' : 'Elige cuándo.')) + '</div>' +
+      asigField(asig, 's.asig') + (vac ? vacAlert(asig, vac) : '') +
       (!f.nTipo ? '<div class="alert warn">' + ic('info') + '<div class="tx">Para guardar, elige arriba <b>qué</b> vas a hacer (llamada, WhatsApp, visita…).</div></div>' : '');
     foot = (sh.mode === 'reportar' ? '<button class="btn" data-act="sback" type="button">Atrás</button>' : '<button class="btn" data-act="sclose" type="button">Cancelar</button>') +
-      '<button class="btn pri" data-act="ssave" type="button"' + (f.nTipo && d ? '' : ' disabled') + '>' + (sh.mode === 'reportar' ? 'Guardar reporte' : 'Guardar') + '</button>';
+      '<button class="btn pri" data-act="ssave" type="button"' + (f.nTipo && d && !vac ? '' : ' disabled') + '>' + (sh.mode === 'reportar' ? 'Guardar reporte' : 'Guardar') + '</button>';
   }
+  body = contactBar(c, sh) + body;
   root.innerHTML = sheetFrame(title, sub, body, foot);
 }
 function saveSheet() {
   const sh = S.sheet, c = client(sh.cid), f = sh.f;
   const changeState = () => {
     if (f.estado !== c.estado) {
-      c.hist.push({ f: now(), t: 'sys', txt: 'Estado: ' + stLabel(c.estado) + ' → ' + stLabel(f.estado) + (f.motivo ? ' · Motivo: ' + f.motivo : ''), u: 'Tú' });
+      c.hist.push({ f: now(), t: 'sys', txt: 'Estado: ' + stLabel(c.estado) + ' → ' + stLabel(f.estado) + (f.motivo ? ' · Motivo: ' + f.motivo : ''), u: me().nombre, uid: S.me });
       c.estado = f.estado; c.motivo = f.motivo;
       c.sinSeg = false;
     }
@@ -1139,14 +1156,15 @@ function saveSheet() {
   const closeNoFollow = () => {
     pending(c.id).forEach(i => { i.done = true; });
     c.sinSeg = true;
-    c.hist.push({ f: now(), t: 'sys', txt: c.estado === 'EXCL' ? 'Ex cliente guardado sin próxima acción' : 'Cerrado sin seguimiento: no se volverá a contactar' + (c.motivo ? ' · Motivo: ' + c.motivo : ''), u: 'Tú' });
+    c.hist.push({ f: now(), t: 'sys', txt: c.estado === 'EXCL' ? 'Ex cliente guardado sin próxima acción' : 'Cerrado sin seguimiento: no se volverá a contactar' + (c.motivo ? ' · Motivo: ' + c.motivo : ''), u: me().nombre, uid: S.me });
   };
   if (sh.mode === 'reportar' && sh.close) {
     const done = sh.itemId ? S.items.find(i => i.id === sh.itemId) : nextOf(c.id);
     if (done) done.done = true;
     const parts = [TYPES[f.tipo].l, f.res]; if (f.res === 'Contactado' && f.tareas.length) parts.push(f.tareas.join(', '));
-    c.hist.push({ f: now(), t: f.tipo, txt: parts.join(' · ') + (f.com.trim() ? ' — ' + f.com.trim() : ''), u: 'Tú' });
+    c.hist.push({ f: now(), t: f.tipo, txt: parts.join(' · ') + (f.com.trim() ? ' — ' + f.com.trim() : ''), u: me().nombre, uid: S.me });
     changeState(); closeNoFollow();
+    if (sh.lead) confirmLead(sh, c);
     closeSheet(); toast('Reporte guardado. Cliente cerrado sin próxima acción'); render(); return;
   }
   if (sh.mode === 'estado') {
@@ -1158,22 +1176,25 @@ function saveSheet() {
     closeSheet(); toast('Estado actualizado'); render(); return;
   }
   const d = whenDate(f);
+  const asig = planAsig(sh, c);
+  if (onVacation(asig, d)) { toast(uname(asig) + ' está de vacaciones ese día: elige otra fecha o asígnalo a otra persona.', true); return; }
   if (sh.mode === 'mover') {
     const it = S.items.find(i => i.id === sh.itemId);
-    c.hist.push({ f: now(), t: 'sys', txt: 'Reprogramado: ' + TYPES[it.tipo].l + ' de ' + when(it.f) + ' a ' + when(d), u: 'Tú' });
-    it.f = d; it.tipo = f.nTipo; it.nota = f.nNota;
+    c.hist.push({ f: now(), t: 'sys', txt: 'Reprogramado: ' + TYPES[it.tipo].l + ' de ' + when(it.f) + ' a ' + when(d), u: me().nombre, uid: S.me });
+    it.f = d; it.tipo = f.nTipo; it.nota = f.nNota; it.asig = it.cid && asig === (client(it.cid) || {}).owner ? undefined : asig;
     closeSheet(); toast('Acción movida a ' + when(d)); render(); return;
   }
   if (sh.mode === 'reportar') {
     const done = sh.itemId ? S.items.find(i => i.id === sh.itemId) : nextOf(c.id);
     if (done) done.done = true;
     const parts = [TYPES[f.tipo].l, f.res]; if (f.res === 'Contactado' && f.tareas.length) parts.push(f.tareas.join(', '));
-    c.hist.push({ f: now(), t: f.tipo, txt: parts.join(' · ') + (f.com.trim() ? ' — ' + f.com.trim() : ''), u: 'Tú' });
+    c.hist.push({ f: now(), t: f.tipo, txt: parts.join(' · ') + (f.com.trim() ? ' — ' + f.com.trim() : ''), u: me().nombre, uid: S.me });
     changeState();
   }
-  if (c.sinSeg) { c.sinSeg = false; c.hist.push({ f: now(), t: 'sys', txt: 'Reabierto: vuelve al seguimiento comercial', u: 'Tú' }); }
-  S.items.push({ id: nid('i'), cid: c.id, tipo: f.nTipo, f: d, nota: f.nNota, done: false });
-  c.hist.push({ f: now(), t: 'sys', txt: 'Planificado: ' + TYPES[f.nTipo].l + ' · ' + when(d) + (f.nNota ? ' · ' + f.nNota : ''), u: 'Tú' });
+  if (c.sinSeg) { c.sinSeg = false; c.hist.push({ f: now(), t: 'sys', txt: 'Reabierto: vuelve al seguimiento comercial', u: me().nombre, uid: S.me }); }
+  S.items.push({ id: nid('i'), cid: c.id, asig: asig !== c.owner ? asig : undefined, tipo: f.nTipo, f: d, nota: f.nNota, done: false });
+  if (sh.lead) confirmLead(sh, c);
+  c.hist.push({ f: now(), t: 'sys', txt: 'Planificado: ' + TYPES[f.nTipo].l + ' · ' + when(d) + (f.nNota ? ' · ' + f.nNota : ''), u: me().nombre, uid: S.me });
   closeSheet(); toast(sh.mode === 'reportar' ? 'Reporte guardado. Siguiente: ' + when(d) : 'Planificado para ' + when(d)); render();
 }
 
@@ -1406,7 +1427,7 @@ function runImport() {
       if (!c.nacimiento && rec.nacimiento) { c.nacimiento = rec.nacimiento; added.push('fecha de nacimiento'); }
       if (!c.dirs.length && rec.dirs.length) { c.dirs = rec.dirs; added.push('dirección'); }
       c.origenes.push({ canal: rec.canal, campana: rec.campana, motivo: rec.motivo, f: now() });
-      c.hist.push({ f: now(), t: 'sys', txt: 'Datos completados desde importación (' + imp.file + ', fila ' + rec.line + ')' + (added.length ? ': ' + added.join(', ') : ': sin datos nuevos'), u: 'Tú' });
+      c.hist.push({ f: now(), t: 'sys', txt: 'Datos completados desde importación (' + imp.file + ', fila ' + rec.line + ')' + (added.length ? ': ' + added.join(', ') : ': sin datos nuevos'), u: me().nombre, uid: S.me });
       merged++; return;
     }
     if (rec.kind === 'dup' && o.dup === 'merge' && !rec.dup) { skipped++; return; }
@@ -1414,7 +1435,7 @@ function runImport() {
     const c = mkClient({ n: ++uid, tipo: rec.tipo, trat: rec.trat, nombre: rec.nombre, estado: rec.estado, medios: rec.medios, dirs: rec.dirs, dni: rec.dni, nacimiento: rec.nacimiento,
       origenes: [{ canal: rec.canal, campana: rec.campana, motivo: rec.motivo, f: now() }], rgpd: rec.rgpd, canales: { email: ok, sms: ok, postal: ok, tel: ok, wa: ok }, publi: ok, firma: null,
       owner: rec.owner, ownerDesde: now(), sede: rec.sede, modelo: rec.modelo, alta: now(), lote,
-      hist: [{ f: now(), t: 'sys', txt: 'Importado desde ' + imp.file + ' (fila ' + rec.line + ')', u: 'Tú' }].concat(rec.nota ? [{ f: now(), t: 'sys', txt: 'Comentario importado: ' + rec.nota, u: 'Tú' }] : []) });
+      hist: [{ f: now(), t: 'sys', txt: 'Importado desde ' + imp.file + ' (fila ' + rec.line + ')', u: me().nombre, uid: S.me }].concat(rec.nota ? [{ f: now(), t: 'sys', txt: 'Comentario importado: ' + rec.nota, u: me().nombre, uid: S.me }] : []) });
     S.clients.push(c); newIds.push(c.id); created++;
   });
   if (o.plan && newIds.length) nextWorkSlots(newIds.length).forEach((f, i) => { S.items.push({ id: nid('i'), cid: newIds[i], tipo: 'llamada', f, dur: 15, nota: 'Primera llamada tras la importación', done: false }); client(newIds[i]).hist.push({ f: now(), t: 'sys', txt: 'Planificado: Llamada · ' + when(f), u: 'Sistema' }); });
@@ -1686,6 +1707,190 @@ async function cpAuto(prefix, raw) {
     places.slice(0, 8).map(p => '<button type="button" class="chip" data-act="cppick" data-k="' + esc(locKey) + '" data-c="' + esc(cpKey) + '" data-v="' + esc(p) + '">' + esc(p) + '</button>').join('') + correosLink(), 'warn', true);
 }
 
+// ---------- clientes: orden ----------
+const SORTS = [['proxima', 'Próxima acción'], ['prioridad', 'Prioridad'], ['alta_desc', 'Fecha de alta (más recientes)'], ['alta_asc', 'Fecha de alta (más antiguos)'], ['az', 'Nombre (A → Z)'], ['za', 'Nombre (Z → A)']];
+const STATE_RANK = { CAL: 1, PRE: 2, SE1: 3, SE2: 4, SE3: 5, PRO: 6, CAR: 7, EXCL: 8, NOC: 9, INH: 10 };
+function clientSorter() {
+  const nx = c => { const n = nextOf(c.id); return n ? +n.f : 0; };
+  const al = c => +new Date(c.alta || 0);
+  const urg = c => { const n = nextOf(c.id); return n && isLate(n) ? 0 : needsPlan(c) ? 1 : 2; };
+  switch (CFG.csort) {
+    case 'alta_desc': return (a, b) => al(b) - al(a);
+    case 'alta_asc': return (a, b) => al(a) - al(b);
+    case 'az': return (a, b) => a.nombre.localeCompare(b.nombre, 'es');
+    case 'za': return (a, b) => b.nombre.localeCompare(a.nombre, 'es');
+    case 'prioridad': return (a, b) => urg(a) - urg(b) || (STATE_RANK[a.estado] || 99) - (STATE_RANK[b.estado] || 99) || nx(a) - nx(b);
+    default: return (a, b) => nx(a) - nx(b);
+  }
+}
+const sortSelect = () => '<label class="rolsel" for="c-sort"><span class="txt">Ordenar</span><select id="c-sort" data-in="cs.sort">' + SORTS.map(o => '<option value="' + o[0] + '"' + ((CFG.csort || 'proxima') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></label>';
+
+// ---------- quién hizo cada anotación ----------
+const histAuthor = (e, c) => e.uid || (e.u && e.u !== 'Tú' && e.u !== 'Sistema' ? ((S.users.find(u => u.nombre === e.u) || {}).id || c.owner) : c.owner);
+const histWho = (e, c) => e.u === 'Sistema' ? 'Sistema' : uname(histAuthor(e, c));
+
+// ---------- reportar y planificar: datos de contacto siempre visibles ----------
+function contactBar(c, sh) {
+  if (!c) return '';
+  const tels = c.medios.filter(m => isTel(m.tipo)), mail = emailOf(c);
+  const l = sh && sh.lead ? S.leads.find(x => x.id === sh.lead.lid) : null;
+  return '<div class="callbar"><div class="who"><b>' + esc(fullName(c)) + ' ' + stChip(c.estado) + '</b>' +
+    (l ? '<span class="meta">Lead: ' + esc(l.peticion) + ' · ' + esc(l.modelo) + ' · ' + esc(l.canal) + ' · recibido ' + esc(sinceTxt(l.rec)) + '</span>' : '') +
+    (mail ? '<span class="meta">' + esc(mail) + '</span>' : '') + '</div>' +
+    '<div class="callnums">' + (tels.length ? tels.map(m => '<a class="btn sm" href="tel:' + esc(normTel(m.valor)) + '">' + ic('phone', 16) + '<span class="phone-num" style="color:inherit">' + esc(m.valor) + '</span></a>').join('') : '<span class="meta">Sin teléfono</span>') + '</div></div>';
+}
+
+// ---------- leads: confirmar al reportar o devolver a la bandeja ----------
+function confirmLead(sh, c) {
+  const L = sh.lead; sh.lead = null;
+  const l = S.leads.find(x => x.id === L.lid); if (!l) return;
+  if (L.created) delete c.provisional;
+  else { c.hist.push({ f: l.rec, t: 'sys', txt: 'Lead recibido: ' + l.peticion + ' ' + l.modelo + ' (' + l.canal + ' / ' + l.campana + ') · añadido a cliente existente', u: 'Sistema' }); c.origenes.push({ canal: l.canal, campana: l.campana, motivo: l.peticion, f: l.rec }); }
+  l.estado = 'atendido'; l.cid = c.id;
+  c.hist.push({ f: now(), t: 'sys', txt: 'Lead atendido por ' + me().nombre + ' · primera respuesta ' + sinceTxt(l.rec).replace('hace ', 'tras '), u: 'Sistema' });
+}
+function cancelLead(L) {
+  if (L.created) {
+    S.clients = S.clients.filter(x => x.id !== L.cid);
+    S.items = S.items.filter(i => i.cid !== L.cid);
+    if (S.cid === L.cid) { S.view = 'leads'; S.prev = 'leads'; }
+  }
+  toast('Sin reportar: el lead sigue en la bandeja de leads');
+}
+
+// ---------- asignar citas ----------
+// Jefe de ventas, gerente y creador asignan a quien quieran; un comercial, solo a sí mismo
+const citaAsig = f => isJefe() ? (f.asig || (f.cid ? (client(f.cid) || {}).owner : null) || S.me) : S.me;
+const planAsig = (sh, c) => {
+  const f = sh.f;
+  if (!isJefe()) return sh.mode === 'mover' ? itemOwner(S.items.find(i => i.id === sh.itemId)) : c.owner;
+  if (f.asig) return f.asig;
+  return sh.mode === 'mover' ? itemOwner(S.items.find(i => i.id === sh.itemId)) : c.owner;
+};
+const asigField = (v, key) => isJefe()
+  ? '<div class="fld"><label for="asig-sel">Asignada a</label><select id="asig-sel" data-in="' + key + '">' + userOpts(v) + '</select></div>'
+  : '<p class="meta" style="margin:0">Asignada a: <b>' + esc(uname(v)) + '</b></p>';
+
+// ---------- vacaciones ----------
+function seedVacs() { return [{ id: 'v1', uid: 'u2', desde: isoDay(D(8, 0)), hasta: isoDay(D(12, 0)), nota: 'Vacaciones (ejemplo ficticio)', por: 'u4', f: new Date().toISOString() }]; }
+const onVacation = (u, d) => { if (!u || !d) return null; const k = isoDay(d); return S.vacs.find(v => v.uid === u && v.desde <= k && k <= v.hasta) || null; };
+const isoShort = iso => { const p = iso.split('-').map(Number); return p[2] + ' ' + MON[p[1] - 1] + ' ' + p[0]; };
+const vacDays = v => Math.round((new Date(v.hasta + 'T00:00') - new Date(v.desde + 'T00:00')) / 86400000) + 1;
+const canEditVac = v => isJefe() || v.uid === S.me;
+const vacAlert = (u, v) => '<div class="alert">' + ic('alert') + '<div class="tx"><b>' + esc(uname(u)) + ' está de vacaciones ese día</b><span>Del ' + esc(isoShort(v.desde)) + ' al ' + esc(isoShort(v.hasta)) + '. Elige otra fecha' + (isJefe() ? ' o asígnalo a otra persona' : '') + '.</span></div></div>';
+const visibleUsers = () => isJefe() ? (S.verDe === 'todos' ? S.users.map(u => u.id) : [S.verDe]) : [S.me];
+const vacsOn = d => { const k = isoDay(d), vis = visibleUsers(); return S.vacs.filter(v => vis.includes(v.uid) && v.desde <= k && k <= v.hasta); };
+const vacChips = d => vacsOn(d).map(v => '<span class="vacchip">Vacaciones: ' + esc(ownerShort(v.uid)) + '</span>').join('');
+const vacBanner = d => { const l = vacsOn(d); return l.length ? '<div class="alert warn">' + ic('flag') + '<div class="tx"><b>De vacaciones este día: ' + l.map(v => esc(ownerShort(v.uid))).join(', ') + '</b><span>No se les puede agendar nada.</span></div></div>' : ''; };
+function vacConflicts(f) {
+  if (!f || !f.uid || !f.desde || !f.hasta) return [];
+  return S.items.filter(i => !i.done && itemOwner(i) === f.uid && isoDay(i.f) >= f.desde && isoDay(i.f) <= f.hasta).sort((a, b) => a.f - b.f);
+}
+function vacSheetHtml() {
+  const f = S.sheet.f;
+  if (!f) {
+    const list = S.vacs.filter(v => isJefe() || v.uid === S.me).sort((a, b) => a.desde.localeCompare(b.desde));
+    const body = '<p class="meta" style="margin:0">' + (isJefe() ? 'Ves y puedes modificar las vacaciones de todo el equipo.' : 'Tus vacaciones. Tu jefe de ventas también las ve y puede modificarlas.') + ' Los días de vacaciones no se puede agendar nada a esa persona.</p>' +
+      (list.length ? '<div class="tbl"><table><thead><tr><th>Persona</th><th>Desde</th><th>Hasta</th><th>Días</th><th>Nota</th><th></th></tr></thead><tbody>' +
+        list.map(v => '<tr><td><b>' + esc(uname(v.uid)) + '</b></td><td>' + esc(isoShort(v.desde)) + '</td><td>' + esc(isoShort(v.hasta)) + '</td><td class="mono">' + vacDays(v) + '</td><td class="wrap">' + esc(v.nota || '') + '</td><td>' +
+          (canEditVac(v) ? '<button class="btn sm" data-act="vacedit" data-v="' + v.id + '" type="button">Modificar</button> <button class="btn sm danger" data-act="vacdel" data-v="' + v.id + '" type="button">Quitar</button>' : '') + '</td></tr>').join('') + '</tbody></table></div>'
+        : '<div class="empty">No hay vacaciones apuntadas.</div>');
+    return sheetFrame('Vacaciones', isJefe() ? 'Todo el equipo' : 'Las tuyas', body, '<button class="btn" data-act="sclose" type="button">Cerrar</button><button class="btn pri" data-act="vacnew" type="button">' + ic('plus', 18) + 'Añadir vacaciones</button>');
+  }
+  const conf = vacConflicts(f), overlap = S.vacs.find(v => v.id !== f.id && v.uid === f.uid && v.desde <= f.hasta && f.desde <= v.hasta);
+  const bad = !f.desde || !f.hasta || f.hasta < f.desde;
+  let body = '<div class="frow">' + (isJefe()
+    ? '<div class="fld"><label for="v-uid">Persona</label><select id="v-uid" data-in="v.uid">' + userOpts(f.uid) + '</select></div>'
+    : '<div class="fld"><span class="lb">Persona</span><b>' + esc(uname(S.me)) + '</b></div>') +
+    '<div class="fld"><label for="v-desde">Desde *</label><input type="date" id="v-desde" data-in="v.desde" value="' + esc(f.desde) + '"></div>' +
+    '<div class="fld"><label for="v-hasta">Hasta *</label><input type="date" id="v-hasta" data-in="v.hasta" value="' + esc(f.hasta) + '" min="' + esc(f.desde) + '"></div></div>' +
+    '<div class="fld"><label for="v-nota">Nota</label><input id="v-nota" data-in="v.nota" value="' + esc(f.nota || '') + '" placeholder="Ej.: vacaciones de Navidad" autocomplete="off"></div>';
+  if (bad) body += '<div class="alert warn">' + ic('info') + '<div class="tx">La fecha de fin no puede ser anterior a la de inicio.</div></div>';
+  if (overlap) body += '<div class="alert warn">' + ic('info') + '<div class="tx">Ya tiene vacaciones del ' + esc(isoShort(overlap.desde)) + ' al ' + esc(isoShort(overlap.hasta)) + ' que se solapan con estas.</div></div>';
+  if (conf.length) body += '<div class="alert">' + ic('alert') + '<div class="tx"><b>Ese periodo está ocupado: ' + conf.length + (conf.length === 1 ? ' cita' : ' citas') + ' en la agenda de ' + esc(uname(f.uid)) + '</b><span>Hay que mover la agenda o no puede cogerse esas vacaciones. Al pulsar Guardar se avisará a ' + esc(uname(f.uid)) + ' y a los jefes de ventas.</span><div class="list">' +
+    conf.slice(0, 8).map(i => '<div class="meta">' + esc(when(i.f)) + ' · ' + esc(TYPES[i.tipo].l) + ' · ' + esc(itemWho(i)) + '</div>').join('') + (conf.length > 8 ? '<div class="meta">y ' + (conf.length - 8) + ' más…</div>' : '') + '</div></div></div>';
+  const foot = '<button class="btn" data-act="vacback" type="button">Volver</button><button class="btn pri" data-act="vacsave" type="button"' + (bad || overlap ? ' disabled' : '') + '>' + (conf.length ? 'Guardar (avisará del conflicto)' : 'Guardar vacaciones') + '</button>';
+  return sheetFrame(f.id ? 'Modificar vacaciones' : 'Añadir vacaciones', uname(f.uid), body, foot);
+}
+const leadersIds = () => S.users.filter(u => u.activo && (u.creador || u.rol === 'jefe' || u.rol === 'gerente')).map(u => u.id);
+function addAviso(para, txt) { S.avisos.push({ id: nid('a'), para, txt, f: now(), leido: false }); }
+function saveVac() {
+  const f = S.sheet.f;
+  if (!isJefe()) f.uid = S.me;
+  if (f.id && !canEditVac(S.vacs.find(v => v.id === f.id))) { toast('No puedes modificar estas vacaciones', true); return; }
+  const conf = vacConflicts(f), periodo = 'del ' + isoShort(f.desde) + ' al ' + isoShort(f.hasta);
+  if (conf.length) {
+    const txt = uname(f.uid) + ' no puede cogerse vacaciones ' + periodo + ': tiene ' + conf.length + (conf.length === 1 ? ' cita' : ' citas') + ' en la agenda. Hay que mover la agenda o elegir otras fechas.';
+    [...new Set([f.uid].concat(leadersIds()))].forEach(u => addAviso(u, txt));
+    toast('Ese periodo está ocupado: no se guardan las vacaciones. Se ha avisado a ' + uname(f.uid) + ' y a los jefes de ventas.', true);
+    render(); return;
+  }
+  const data = { uid: f.uid, desde: f.desde, hasta: f.hasta, nota: (f.nota || '').trim(), por: S.me, f: new Date().toISOString() };
+  if (f.id) Object.assign(S.vacs.find(v => v.id === f.id), data); else S.vacs.push(Object.assign({ id: nid('v') }, data));
+  if (!isJefe()) leadersIds().forEach(u => addAviso(u, uname(S.me) + ' ha apuntado vacaciones ' + periodo + '.'));
+  else if (f.uid !== S.me) addAviso(f.uid, uname(S.me) + ' ha ' + (f.id ? 'modificado' : 'apuntado') + ' tus vacaciones ' + periodo + '.');
+  S.sheet.f = null; toast('Vacaciones guardadas ' + periodo); render();
+}
+function avisosHtml() {
+  const l = S.avisos.filter(a => a.para === S.me && !a.leido).sort((a, b) => b.f - a.f);
+  return l.length ? '<div class="avisos">' + l.map(a => '<div class="alert warn">' + ic('alert') + '<div class="tx"><span><b>Aviso</b> · ' + esc(a.txt) + ' <span class="meta">(' + esc(when(new Date(a.f))) + ')</span></span><button class="btn sm" data-act="avisook" data-v="' + a.id + '" type="button">Entendido</button></div></div>').join('') + '</div>' : '';
+}
+
+// ---------- histórico de reportes ----------
+function histRange() {
+  const q = S.hq, r = new Date(q.ref + 'T00:00'); let a = sod(r), b;
+  if (q.per === 'dia') { b = new Date(a); b.setDate(b.getDate() + 1); }
+  else if (q.per === 'semana') { a.setDate(a.getDate() - (a.getDay() + 6) % 7); b = new Date(a); b.setDate(b.getDate() + 7); }
+  else if (q.per === 'mes') { a = new Date(r.getFullYear(), r.getMonth(), 1); b = new Date(r.getFullYear(), r.getMonth() + 1, 1); }
+  else { a = new Date(r.getFullYear(), 0, 1); b = new Date(r.getFullYear() + 1, 0, 1); }
+  return [a, b];
+}
+function histLabel() {
+  const [a, b] = histRange(), q = S.hq, last = new Date(b - 86400000);
+  if (q.per === 'dia') return capitalize(DAYS[a.getDay()]) + ' ' + a.getDate() + ' ' + MESES[a.getMonth()] + ' ' + a.getFullYear();
+  if (q.per === 'semana') return 'Semana del ' + a.getDate() + ' ' + MON[a.getMonth()] + ' al ' + last.getDate() + ' ' + MON[last.getMonth()] + ' ' + last.getFullYear();
+  if (q.per === 'mes') return capitalize(MESES[a.getMonth()]) + ' ' + a.getFullYear();
+  return 'Año ' + a.getFullYear();
+}
+function histRows() {
+  const [a, b] = histRange(), q = S.hq, out = [];
+  S.clients.forEach(c => c.hist.forEach(e => {
+    const t = TYPES[e.t]; if (!t) return;
+    const f = e.f instanceof Date ? e.f : new Date(e.f); if (f < a || f >= b) return;
+    const who = histAuthor(e, c);
+    if (!isJefe() && who !== S.me) return;
+    if (isJefe() && q.who !== 'todos' && who !== q.who) return;
+    if (q.tipo !== 'todo' && t.g !== q.tipo) return;
+    out.push({ f, c, e, t, who });
+  }));
+  return out.sort((x, y) => y.f - x.f);
+}
+function vHist() {
+  const q = S.hq, rows = histRows();
+  const tipos = [['todo', 'Todo'], ['contacto', 'Llamadas y mensajes'], ['visita', 'Visitas'], ['prueba', 'Pruebas'], ['entrega', 'Entregas']];
+  const contact = rows.filter(r => /· Contactado/.test(r.e.txt)).length;
+  let h = '<div class="histtb"><div class="seg">' + [['dia', 'Día'], ['semana', 'Semana'], ['mes', 'Mes'], ['ano', 'Año']].map(p => '<button class="' + (q.per === p[0] ? 'on' : '') + '" data-act="hper" data-v="' + p[0] + '" type="button">' + p[1] + '</button>').join('') + '</div>' +
+    '<div class="daynav"><button class="iconbtn" data-act="hnav" data-v="-1" type="button" aria-label="Anterior">' + ic('left') + '</button><div class="d">' + esc(histLabel()) + '</div><button class="iconbtn" data-act="hnav" data-v="1" type="button" aria-label="Siguiente">' + ic('right') + '</button></div>' +
+    '<label class="rolsel" for="h-ref"><span class="txt">Ir a</span><input type="date" id="h-ref" data-in="hq.ref" value="' + esc(q.ref) + '"></label>' +
+    '<button class="btn sm" data-act="hnav" data-v="0" type="button">Hoy</button>' +
+    (isJefe() ? '<label class="rolsel" for="h-who"><span class="txt">Comercial</span><select id="h-who" data-in="hq.who"><option value="todos">Todo el equipo</option>' + S.users.map(u => '<option value="' + esc(u.id) + '"' + (q.who === u.id ? ' selected' : '') + '>' + esc(u.nombre) + '</option>').join('') + '</select></label>' : '') + '</div>';
+  h += '<div class="chips scroll">' + tipos.map(t => '<button class="chip' + (q.tipo === t[0] ? ' on' : '') + '" data-act="htipo" data-v="' + t[0] + '" type="button">' + t[1] + '</button>').join('') + '</div>';
+  h += '<div class="kpis"><div class="kpi"><b>' + rows.length + '</b><span>Reportes en el periodo</span></div><div class="kpi"><b>' + rows.filter(r => r.t.g === 'contacto').length + '</b><span>Llamadas y mensajes</span></div><div class="kpi"><b>' + rows.filter(r => r.t.g === 'visita' || r.t.g === 'prueba').length + '</b><span>Visitas y pruebas</span></div><div class="kpi ok"><b>' + (rows.length ? Math.round(contact * 100 / rows.length) : 0) + '%</b><span>Con contacto</span></div></div>';
+  h += '<div class="toolbar"><h3 class="sec" style="flex:1">' + (isJefe() ? 'Reportes del equipo' : 'Tus reportes') + '</h3><button class="btn" data-act="histexp" data-v="xlsx" type="button">' + ic('download', 18) + 'Excel</button><button class="btn" data-act="histexp" data-v="csv" type="button">CSV</button></div>';
+  h += rows.length ? '<div class="tbl"><table><thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Tipo</th><th>Qué se reportó</th><th>Hecho por</th></tr></thead><tbody>' +
+    rows.map(r => '<tr><td>' + esc(dayLabel(r.f)) + (Math.abs(dayDiff(r.f)) > 1 ? '' : ' · ' + r.f.getDate() + ' ' + MON[r.f.getMonth()]) + '</td><td class="mono">' + hm(r.f) + '</td><td><button class="vbtn" data-act="open" data-v="' + r.c.id + '" type="button"><b>' + esc(r.c.nombre) + '</b></button><div class="meta">' + esc(telOf(r.c)) + '</div></td><td>' + esc(r.t.l) + '</td><td class="wrap">' + esc(r.e.txt) + '</td><td>' + esc(uname(r.who)) + '</td></tr>').join('') + '</tbody></table></div>'
+    : '<div class="empty">No hay reportes en este periodo. Cambia de día, semana, mes o año, o quita filtros.</div>';
+  return h;
+}
+function histExport(fmt) {
+  const rows = histRows().map(r => ({ 'Fecha': isoDay(r.f), 'Hora': hm(r.f), 'Cliente': r.c.nombre, 'Teléfono': telOf(r.c), 'Tipo': r.t.l, 'Qué se reportó': r.e.txt, 'Hecho por': uname(r.who) }));
+  if (!rows.length) { toast('No hay reportes que exportar en este periodo', true); return; }
+  const name = 'alfa-crm-reportes-' + S.hq.per + '-' + S.hq.ref;
+  if (fmt === 'csv') saveFile(name + '.csv', toCsv(rows), 'text/csv');
+  else if (typeof XLSX === 'undefined') toast('No se ha podido cargar Excel: exporta en CSV', true);
+  else saveFile(name + '.xlsx', toXlsx(rows, 'Reportes'), '');
+}
+
 // ---------- usuarios ----------
 const canEditUser = u => me().creador || (canAdmin() && !u.creador && (!u.admin || u.id === S.me));
 function vUsuarios() {
@@ -1760,14 +1965,14 @@ function saveUser() {
 function openCita(preset, itemId) {
   const it = itemId ? S.items.find(i => i.id === itemId) : null;
   let f = { tipo: 'llamada', who: 'cliente', cid: null, q: '', cNom: '', cTel: '', crear: true, titulo: '', date: isoDay(now()), time: '10:00', dur: '30', nota: '' };
-  if (it) f = Object.assign(f, { tipo: it.tipo, who: it.cid ? 'cliente' : (it.contacto ? 'manual' : 'sin'), cid: it.cid, cNom: it.contacto || '', cTel: it.tel || '', crear: false, titulo: it.titulo || '', date: isoDay(it.f), time: hm(it.f), dur: String(it.dur || 30), nota: it.nota || '' });
+  if (it) f = Object.assign(f, { asig: itemOwner(it), asigTouched: true, tipo: it.tipo, who: it.cid ? 'cliente' : (it.contacto ? 'manual' : 'sin'), cid: it.cid, cNom: it.contacto || '', cTel: it.tel || '', crear: false, titulo: it.titulo || '', date: isoDay(it.f), time: hm(it.f), dur: String(it.dur || 30), nota: it.nota || '' });
   S.sheet = { mode: 'cita', itemId: it ? it.id : null, f: Object.assign(f, preset || {}) };
   renderSheet();
 }
 function citaWhen(f) { if (!f.date || !f.time) return null; const p = f.time.split(':').map(Number), d = new Date(f.date + 'T00:00'); d.setHours(p[0], p[1], 0, 0); return d; }
 function pickList(q) {
   const t = q.trim().toLowerCase(), td = normTel(q);
-  const l = S.clients.filter(c => !t || c.nombre.toLowerCase().includes(t) || (td.length >= 3 && telsOf(c).some(x => x.includes(td)))).sort((a, b) => a.nombre.localeCompare(b.nombre)).slice(0, 6);
+  const l = (isJefe() ? S.clients : scoped()).filter(c => !t || c.nombre.toLowerCase().includes(t) || (td.length >= 3 && telsOf(c).some(x => x.includes(td)))).sort((a, b) => a.nombre.localeCompare(b.nombre)).slice(0, 6);
   return l.length ? l.map(c => '<button class="pick" data-act="cpick" data-v="' + c.id + '" type="button">' + stChip(c.estado) + '<span><b>' + esc(c.nombre) + '</b><small>' + esc(telOf(c)) + ' · ' + esc(c.modelo) + '</small></span></button>').join('') : '<div class="meta">Ningún cliente coincide. Puedes apuntarlo a mano en "Persona nueva".</div>';
 }
 function citaHtml() {
@@ -1789,18 +1994,21 @@ function citaHtml() {
   }
   const okWho = f.who === 'cliente' ? !!f.cid : f.who === 'manual' ? !!f.cNom.trim() : !!f.titulo.trim();
   const past = d && d < now();
+  const asig = citaAsig(f), vac = d && onVacation(asig, d);
   const body = '<div class="fld"><span class="lb">Qué *</span>' + chipSet('tipo', ALL_TYPES, f.tipo) + '</div>' +
     '<div class="fld"><span class="lb">Con quién *</span>' + who + '</div>' +
     '<div class="frow"><div class="fld"><label for="c-date">Fecha *</label><input type="date" id="c-date" data-in="s.date" value="' + esc(f.date) + '"></div>' +
     '<div class="fld"><label for="c-time">Hora *</label><select id="c-time" data-in="s.time">' + times.map(t => '<option' + (t === f.time ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></div>' +
     '<div class="fld"><label for="c-dur">Duración</label><select id="c-dur" data-in="s.dur">' + [['15', '15 min'], ['30', '30 min'], ['45', '45 min'], ['60', '1 hora'], ['90', '1 h 30 min'], ['120', '2 horas']].map(o => '<option value="' + o[0] + '"' + (o[0] === f.dur ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></div></div>' +
     '<div class="fld"><label for="c-nota">Nota</label><input id="c-nota" data-in="s.nota" value="' + esc(f.nota) + '" placeholder="Ej.: llevar la oferta impresa" autocomplete="off"></div>' +
+    asigField(asig, 's.asig') + (vac ? vacAlert(asig, vac) : '') +
     '<div class="meta">' + (d ? (past ? '<span style="color:var(--bad)">Esa fecha y hora ya han pasado.</span>' : 'Quedará en la agenda: <b>' + esc(when(d)) + '</b>') : 'Elige fecha y hora.') + '</div>';
-  const foot = (sh.itemId ? '<button class="btn danger" data-act="cdel" type="button">Eliminar</button>' : '') + '<button class="btn" data-act="sclose" type="button">Cancelar</button><button class="btn pri" data-act="csave" type="button"' + (f.tipo && okWho && d && !past ? '' : ' disabled') + '>' + (sh.itemId ? 'Guardar cambios' : 'Añadir a la agenda') + '</button>';
+  const foot = (sh.itemId ? '<button class="btn danger" data-act="cdel" type="button">Eliminar</button>' : '') + '<button class="btn" data-act="sclose" type="button">Cancelar</button><button class="btn pri" data-act="csave" type="button"' + (f.tipo && okWho && d && !past && !vac ? '' : ' disabled') + '>' + (sh.itemId ? 'Guardar cambios' : 'Añadir a la agenda') + '</button>';
   return sheetFrame(sh.itemId ? 'Editar cita' : 'Nueva cita', 'Agenda manual', body, foot);
 }
 function saveCita() {
   const sh = S.sheet, f = sh.f, d = citaWhen(f);
+  { const a = citaAsig(f); if (onVacation(a, d)) { toast(uname(a) + ' está de vacaciones ese día: elige otra fecha o asígnala a otra persona.', true); return; } }
   let cid = f.who === 'cliente' ? f.cid : null;
   if (f.who === 'manual' && f.crear) {
     const dup = findByTel(f.cTel);
@@ -1809,15 +2017,15 @@ function saveCita() {
       const c = mkClient({ n: ++uid, owner: S.me, nombre: f.cNom.trim(), estado: 'PRO', alta: now(), ownerDesde: now(), firma: null,
         medios: f.cTel.trim() ? [{ tipo: 'Teléfono móvil', valor: f.cTel.trim(), principal: true, franja: 'Cualquier hora' }] : [],
         origenes: [{ canal: 'Teléfono', campana: 'Sin campaña', motivo: 'Información', f: now() }],
-        hist: [{ f: now(), t: 'sys', txt: 'Se crea el contacto desde la agenda', u: 'Tú' }] });
+        hist: [{ f: now(), t: 'sys', txt: 'Se crea el contacto desde la agenda', u: me().nombre, uid: S.me }] });
       S.clients.push(c); cid = c.id;
     }
   }
-  const data = { cid, resp: S.me, tipo: f.tipo, f: d, dur: +f.dur, nota: f.nota.trim(), titulo: f.who === 'sin' ? f.titulo.trim() : '', contacto: f.who === 'manual' && !cid ? f.cNom.trim() : '', tel: f.who === 'manual' && !cid ? f.cTel.trim() : '' };
+  const data = { cid, resp: S.me, asig: (a => cid && a === (client(cid) || {}).owner ? undefined : a)(citaAsig(Object.assign({}, f, { cid }))), tipo: f.tipo, f: d, dur: +f.dur, nota: f.nota.trim(), titulo: f.who === 'sin' ? f.titulo.trim() : '', contacto: f.who === 'manual' && !cid ? f.cNom.trim() : '', tel: f.who === 'manual' && !cid ? f.cTel.trim() : '' };
   let it;
   if (sh.itemId) { it = S.items.find(i => i.id === sh.itemId); Object.assign(it, data); }
   else { it = Object.assign({ id: nid('i'), done: false }, data); S.items.push(it); }
-  if (cid) client(cid).hist.push({ f: now(), t: 'sys', txt: (sh.itemId ? 'Cita modificada: ' : 'Planificado desde la agenda: ') + TYPES[f.tipo].l + ' · ' + when(d) + (data.nota ? ' · ' + data.nota : ''), u: 'Tú' });
+  if (cid) client(cid).hist.push({ f: now(), t: 'sys', txt: (sh.itemId ? 'Cita modificada: ' : 'Planificado desde la agenda: ') + TYPES[f.tipo].l + ' · ' + when(d) + (data.nota ? ' · ' + data.nota : ''), u: me().nombre, uid: S.me });
   S.ag.date = sod(d); closeSheet(); toast((sh.itemId ? 'Cita actualizada: ' : 'Añadido a la agenda: ') + when(d)); render();
 }
 
@@ -1844,14 +2052,14 @@ function saveEdit() {
     if (!d.valor.trim()) { toast('Escribe el teléfono o el email'); return; }
     const other = isTel(d.tipo) ? findByTel(d.valor) : S.clients.find(x => x.medios.some(m => m.valor.toLowerCase() === d.valor.trim().toLowerCase()));
     if (other && other.id !== c.id) { toast('Ese dato ya pertenece a ' + other.nombre); return; }
-    if (key === 'm:new') { c.medios.push(Object.assign({}, d, { valor: d.valor.trim() })); c.hist.push({ f: now(), t: 'sys', txt: 'Añadido modo de contacto: ' + d.tipo + ' ' + d.valor.trim(), u: 'Tú' }); if (d.principal) setPrincipal(c.medios, c.medios.length - 1, m => isTel(m.tipo)); }
+    if (key === 'm:new') { c.medios.push(Object.assign({}, d, { valor: d.valor.trim() })); c.hist.push({ f: now(), t: 'sys', txt: 'Añadido modo de contacto: ' + d.tipo + ' ' + d.valor.trim(), u: me().nombre, uid: S.me }); if (d.principal) setPrincipal(c.medios, c.medios.length - 1, m => isTel(m.tipo)); }
     else { const i = +key.slice(2), old = c.medios[i]; if (old.valor !== d.valor.trim() || old.tipo !== d.tipo) logChange(c, old.tipo, old.valor, d.valor.trim()); c.medios[i] = Object.assign({}, d, { valor: d.valor.trim() }); if (d.principal) setPrincipal(c.medios, i, m => isTel(m.tipo)); }
   } else if (key[0] === 'd') {
     if (!d.nombre.trim()) { toast('Escribe el nombre de la vía'); return; }
-    if (key === 'd:new') { c.dirs.push(Object.assign({}, d)); c.hist.push({ f: now(), t: 'sys', txt: 'Añadida dirección: ' + dirText(d), u: 'Tú' }); if (d.principal) setPrincipal(c.dirs, c.dirs.length - 1, () => 1); }
+    if (key === 'd:new') { c.dirs.push(Object.assign({}, d)); c.hist.push({ f: now(), t: 'sys', txt: 'Añadida dirección: ' + dirText(d), u: me().nombre, uid: S.me }); if (d.principal) setPrincipal(c.dirs, c.dirs.length - 1, () => 1); }
     else { const i = +key.slice(2); logChange(c, 'Dirección ' + (i + 1), dirText(c.dirs[i]), dirText(d)); c.dirs[i] = Object.assign({}, d); if (d.principal) setPrincipal(c.dirs, i, () => 1); }
   } else if (key === 'o:new') {
-    c.origenes.push(Object.assign({}, d, { f: now() })); c.hist.push({ f: now(), t: 'sys', txt: 'Nuevo origen: ' + d.canal + ' / ' + d.motivo, u: 'Tú' });
+    c.origenes.push(Object.assign({}, d, { f: now() })); c.hist.push({ f: now(), t: 'sys', txt: 'Nuevo origen: ' + d.canal + ' / ' + d.motivo, u: me().nombre, uid: S.me });
   } else if (key === 'p:dni') {
     if (d.dni.trim().toUpperCase() !== c.dni) logChange(c, c.tipo === 'Empresa' ? 'CIF' : 'DNI', c.dni, d.dni.trim().toUpperCase());
     if (d.nac !== c.nac) logChange(c, 'Nacionalidad', c.nac, d.nac);
@@ -1864,8 +2072,8 @@ function saveEdit() {
 }
 function delEdit() {
   const c = client(S.edit.cid), key = S.edit.key, i = +key.slice(2);
-  if (key[0] === 'm') { const m = c.medios.splice(i, 1)[0]; c.hist.push({ f: now(), t: 'sys', txt: 'Eliminado modo de contacto: ' + m.tipo + ' ' + m.valor, u: 'Tú' }); }
-  if (key[0] === 'd') { const d = c.dirs.splice(i, 1)[0]; c.hist.push({ f: now(), t: 'sys', txt: 'Eliminada dirección: ' + dirText(d), u: 'Tú' }); if (c.dirs.length && !c.dirs.some(x => x.principal)) c.dirs[0].principal = true; }
+  if (key[0] === 'm') { const m = c.medios.splice(i, 1)[0]; c.hist.push({ f: now(), t: 'sys', txt: 'Eliminado modo de contacto: ' + m.tipo + ' ' + m.valor, u: me().nombre, uid: S.me }); }
+  if (key[0] === 'd') { const d = c.dirs.splice(i, 1)[0]; c.hist.push({ f: now(), t: 'sys', txt: 'Eliminada dirección: ' + dirText(d), u: me().nombre, uid: S.me }); if (c.dirs.length && !c.dirs.some(x => x.principal)) c.dirs[0].principal = true; }
   S.edit = null; toast('Eliminado'); render();
 }
 function setRgpd(c, field, label, from, to) { logChange(c, label, from, to); }
@@ -1877,19 +2085,20 @@ function go(v) { if (v === 'ajustes') refreshMicPerm(); S.prev = v; S.view = v; 
 function openClient(id) { if (S.view !== 'ficha') S.prev = S.view === 'nuevo' ? 'clientes' : S.view; S.cid = id; S.ftab = 'contacto'; S.edit = null; S.view = 'ficha'; $('content').scrollTop = 0; render(); }
 function attend(lid) {
   const l = S.leads.find(x => x.id === lid);
-  let c = findByTel(l.tel);
+  let c = findByTel(l.tel), created = false;
   const txt = 'Lead recibido: ' + l.peticion + ' ' + l.modelo + ' (' + l.canal + ' / ' + l.campana + ')';
-  if (c) { c.hist.push({ f: l.rec, t: 'sys', txt: txt + ' · añadido a cliente existente', u: 'Sistema' }); c.origenes.push({ canal: l.canal, campana: l.campana, motivo: l.peticion, f: l.rec }); }
-  else {
+  if (!c) {
+    created = true;
     c = mkClient({ n: ++uid, owner: S.me, nombre: l.nombre, estado: 'PRE', modelo: l.modelo, alta: now(), ownerDesde: now(), firma: null,
       medios: [{ tipo: 'Teléfono móvil', valor: l.tel, principal: true, franja: 'Cualquier hora' }],
-      origenes: [{ canal: l.canal, campana: l.campana, motivo: l.peticion, f: l.rec }], hist: [{ f: l.rec, t: 'sys', txt, u: 'Sistema' }] });
+      origenes: [{ canal: l.canal, campana: l.campana, motivo: l.peticion, f: l.rec }], hist: [{ f: l.rec, t: 'sys', txt, u: 'Sistema' }], provisional: lid });
     S.clients.push(c);
   }
-  l.estado = 'atendido'; l.cid = c.id;
-  c.hist.push({ f: now(), t: 'sys', txt: 'Lead asignado a ti · primera respuesta ' + sinceTxt(l.rec).replace('hace ', 'tras '), u: 'Sistema' });
+  // El lead solo pasa a atendido cuando se guarda el reporte; si se cancela, vuelve a la bandeja
   openClient(c.id);
   openSheet('reportar', c.id, null, { tipo: 'llamada' });
+  S.sheet.lead = { lid, cid: c.id, created };
+  renderSheet();
 }
 const H = {
   go: v => go(v),
@@ -1916,7 +2125,7 @@ const H = {
   edel: () => delEdit(),
   ecancel: () => { S.edit = null; render(); },
   rver: () => toast('El documento de privacidad se genera con la firma digital (fase 4)'),
-  rfirma: () => { const c = client(S.cid); c.firma = { f: now(), id: hex() }; c.hist.push({ f: now(), t: 'sys', txt: 'Firma digital: documento de protección de datos firmado (simulado)', u: 'Tú' }); toast('Documento firmado (simulación)'); render(); },
+  rfirma: () => { const c = client(S.cid); c.firma = { f: now(), id: hex() }; c.hist.push({ f: now(), t: 'sys', txt: 'Firma digital: documento de protección de datos firmado (simulado)', u: me().nombre, uid: S.me }); toast('Documento firmado (simulación)'); render(); },
   rall: () => { const c = client(S.cid), all = CANALES_RGPD.every(k => c.canales[k[0]]); CANALES_RGPD.forEach(k => { c.canales[k[0]] = !all; }); logChange(c, 'Todos los canales', all ? 'Sí' : 'No', all ? 'No' : 'Sí'); render(); },
   rch: v => { const c = client(S.cid), lbl = CANALES_RGPD.find(k => k[0] === v)[1]; c.canales[v] = !c.canales[v]; logChange(c, lbl, c.canales[v] ? 'No' : 'Sí', c.canales[v] ? 'Sí' : 'No'); render(); },
   rpub: v => { const c = client(S.cid), nv = v === '1'; if (c.publi !== nv) { logChange(c, 'Publicidad personalizada', c.publi ? 'Sí' : 'No', nv ? 'Sí' : 'No'); c.publi = nv; render(); } },
@@ -1949,6 +2158,17 @@ const H = {
   unew: () => openUser(null),
   uedit: v => openUser(v),
   usave: () => saveUser(),
+  vacas: () => { S.sheet = { mode: 'vacas', f: null }; renderSheet(); },
+  vacnew: () => { S.sheet.f = { id: null, uid: isJefe() && S.verDe !== 'todos' ? S.verDe : S.me, desde: isoDay(D(1, 0)), hasta: isoDay(D(1, 0)), nota: '' }; renderSheet(); },
+  vacedit: v => { const x = S.vacs.find(y => y.id === v); S.sheet.f = Object.assign({}, x); renderSheet(); },
+  vacdel: v => { const x = S.vacs.find(y => y.id === v); if (!x || !canEditVac(x)) return; S.vacs = S.vacs.filter(y => y !== x); toast('Vacaciones eliminadas'); render(); },
+  vacback: () => { S.sheet.f = null; renderSheet(); },
+  vacsave: () => saveVac(),
+  avisook: v => { const a = S.avisos.find(x => x.id === v); if (a) a.leido = true; render(); },
+  hper: v => { S.hq.per = v; render(); },
+  hnav: v => { const d = new Date(S.hq.ref + 'T00:00'), k = +v, p = S.hq.per; if (!k) S.hq.ref = isoDay(now()); else { if (p === 'dia') d.setDate(d.getDate() + k); else if (p === 'semana') d.setDate(d.getDate() + 7 * k); else if (p === 'mes') d.setMonth(d.getMonth() + k); else d.setFullYear(d.getFullYear() + k); S.hq.ref = isoDay(d); } render(); },
+  htipo: v => { S.hq.tipo = v; render(); },
+  histexp: v => histExport(v),
   cptest: async () => {
     CP_TEST = { msg: 'Probando con el código postal 28001…', ok: true };
     let out = document.getElementById('cptest-res'); if (out) out.textContent = CP_TEST.msg;
@@ -1970,7 +2190,7 @@ const H = {
   cpick: v => { Object.assign(S.sheet.f, { who: 'cliente', cid: v }); renderSheet(); },
   cclear: () => { S.sheet.f.cid = null; renderSheet(); },
   csave: () => saveCita(),
-  cdel: () => { const it = S.items.find(i => i.id === S.sheet.itemId); S.items = S.items.filter(i => i !== it); if (it.cid) client(it.cid).hist.push({ f: now(), t: 'sys', txt: 'Cita eliminada: ' + TYPES[it.tipo].l + ' · ' + when(it.f), u: 'Tú' }); closeSheet(); toast('Cita eliminada'); render(); },
+  cdel: () => { const it = S.items.find(i => i.id === S.sheet.itemId); S.items = S.items.filter(i => i !== it); if (it.cid) client(it.cid).hist.push({ f: now(), t: 'sys', txt: 'Cita eliminada: ' + TYPES[it.tipo].l + ' · ' + when(it.f), u: me().nombre, uid: S.me }); closeSheet(); toast('Cita eliminada'); render(); },
   done: v => { const it = S.items.find(i => i.id === v); it.done = true; toast('Marcada como hecha'); render(); },
   dtab: v => { S.dtab = v; go('datos'); },
   ipaste: () => { const t = S.imp.paste; if (!t.trim()) { toast('Pega primero los datos'); return; } Object.assign(S.imp, freshImp(), { opts: S.imp.opts, file: 'Datos pegados', paste: t }); try { setTable(parseCsv(t)); } catch (e) { S.imp.err = e.message; S.imp.step = 'origen'; } render(); },
@@ -2026,6 +2246,9 @@ document.addEventListener('input', e => {
   if (k === 'u.me') { S.me = val; S.verDe = 'todos'; S.edit = null; S.sheet = null; if ((!isJefe() && S.view === 'equipo') || (!canAdmin() && S.view === 'usuarios') || S.view === 'ficha') { S.view = 'hoy'; S.prev = 'hoy'; } toast('Has entrado como ' + me().nombre + ' (' + roleLabel(me()) + ')'); render(); return; }
   if (k === 'u.verDe') { S.verDe = val; render(); return; }
   if (k.startsWith('g.')) { CFG[k.slice(2)] = val; saveCfg(); if (k === 'g.mic' && !val) { micBtn.hidden = true; micTip.hidden = true; } toast(k === 'g.cpLookup' ? (val ? 'Búsqueda de población activada' : 'Búsqueda de población desactivada: solo se pondrá la provincia') : k === 'g.mic' ? (val ? 'Botón de micrófono activado' : 'Botón de micrófono oculto') : 'Idioma del dictado: ' + (LANGS.find(l => l[0] === val) || ['', val])[1]); return; }
+  if (k === 'cs.sort') { CFG.csort = val; saveCfg(); const l = $('clist'); if (l) l.innerHTML = clistHtml(); return; }
+  if (k.startsWith('hq.')) { if (val) S.hq[k.slice(3)] = val; render(); return; }
+  if (k.startsWith('v.') && S.sheet && S.sheet.f) { S.sheet.f[k.slice(2)] = val; if (k !== 'v.nota') renderSheet(); return; }
   if (k === 'p.paste') { S.imp.paste = val; return; }
   if (k.startsWith('m.')) { S.imp.map[+k.slice(2)] = val; render(); return; }
   if (k.startsWith('x.')) { S.exp[k.slice(2)] = val; render(); return; }
@@ -2048,6 +2271,7 @@ document.addEventListener('input', e => {
   }
   if (k.startsWith('s.') && S.sheet) {
     const key = k.slice(2); S.sheet.f[key] = val;
+    if (key === 'asig') S.sheet.f.asigTouched = true;
     if (key === 'com') { const c = $('s-cnt'); if (c) c.textContent = val.length + ' / 1000'; return; }
     if (key === 'q') { const r = $('c-res'); if (r) r.innerHTML = pickList(val); return; }
     if (['unom', 'uemail'].includes(key)) return;
@@ -2079,7 +2303,7 @@ document.addEventListener('submit', e => {
     dni: (emp ? n.cif : n.dni).trim().toUpperCase(), nac: n.nac, nacimiento: n.nacimiento, carnet: n.carnet, civil: n.civil, prof: n.prof,
     rgpd: n.rgpd, canales: Object.assign({}, n.canales), publi: n.publi, firma: null, empresa: emp && n.pcontacto.trim() ? ['Persona de contacto: ' + n.pcontacto.trim()] : [],
     owner: n.owner || S.me, ownerDesde: now(), sede: n.sede, modelo: n.modelo, alta: now(),
-    hist: [{ f: now(), t: 'sys', txt: 'Se crea el contacto · ' + n.origen.canal + (n.origen.campana !== 'Sin campaña' ? ' / ' + n.origen.campana : '') + ' · ' + n.origen.motivo, u: 'Tú' }] });
+    hist: [{ f: now(), t: 'sys', txt: 'Se crea el contacto · ' + n.origen.canal + (n.origen.campana !== 'Sin campaña' ? ' / ' + n.origen.campana : '') + ' · ' + n.origen.motivo, u: me().nombre, uid: S.me }] });
   S.clients.push(c); S.nuevo = freshNuevo();
   openClient(c.id); openSheet('alta', c.id);
 });
@@ -2134,7 +2358,8 @@ function vAjustes() {
     nosoportado: ['bad', 'No disponible', 'Este navegador no permite usar el micrófono desde la página.'],
     desconocido: ['warn', 'Sin comprobar', 'Pulsa "Dar permiso al micrófono" para comprobarlo.']
   }[MICPERM] || ['warn', 'Sin comprobar', ''];
-  let h = '<div class="cols2"><div class="stack">';
+  let h = '<div class="chips mobonly" style="flex-wrap:wrap"><button class="btn" data-act="dtab" data-v="imp" type="button">' + ic('db', 18) + 'Importar / exportar</button>' + (canAdmin() ? '<button class="btn" data-act="go" data-v="usuarios" type="button">' + ic('shield', 18) + 'Usuarios</button>' : '') + '</div>';
+  h += '<div class="cols2"><div class="stack">';
   h += '<div class="panel stack"><h3 class="sec">Tus datos</h3><p style="margin:0">' + (STORE_OK ? 'Todo lo que haces se guarda automáticamente <b>en este navegador</b>' + (LAST_SAVE ? ' (último guardado: ' + esc(when(LAST_SAVE)) + ')' : '') + '.' : '<b style="color:var(--bad)">Este navegador no permite guardar</b>: lo que hagas se perderá al cerrar. Descarga una copia antes de salir.') + '</p>' +
     '<ul class="tips"><li>Solo lo ves tú, en este dispositivo y este navegador: no se comparte con el equipo.</li><li>Si borras los datos de navegación o usas una ventana de incógnito, se pierde. Descarga una copia de vez en cuando.</li><li>No metas clientes reales en esta demostración. En la aplicación definitiva los datos se guardarán en un servidor y los verá el equipo según su rol.</li></ul>' +
     '<div class="chips"><button class="btn pri" data-act="xcopia" type="button">' + ic('download', 18) + 'Descargar copia de mis datos</button><button class="btn" data-act="dtab" data-v="imp" type="button">Restaurar una copia</button><button class="btn danger" data-act="reset" type="button">Borrar mis datos</button></div></div>';
@@ -2252,7 +2477,7 @@ let STORE_OK = true, LAST_SAVE = null;
 const savedTxt = () => STORE_OK ? (LAST_SAVE ? 'Guardado ' + hm(LAST_SAVE) : 'Guardado automático') : 'Sin guardar';
 function persist() {
   try {
-    localStorage.setItem(DATA_KEY, JSON.stringify({ v: 2, savedAt: new Date().toISOString(), uid, clients: S.clients, items: S.items, leads: S.leads, users: S.users, me: S.me }));
+    localStorage.setItem(DATA_KEY, JSON.stringify({ v: 2, savedAt: new Date().toISOString(), uid, clients: S.clients, items: S.items, leads: S.leads, users: S.users, me: S.me, vacs: S.vacs, avisos: S.avisos }));
     STORE_OK = true; LAST_SAVE = new Date();
   } catch (e) { STORE_OK = false; }
   const el = document.getElementById('savedind');
@@ -2270,6 +2495,9 @@ function loadSaved() {
     S.clients.forEach(c => { c.owner = LEGACY_OWNERS[c.owner] || c.owner; });
     S.items.forEach(i => { if (i.resp) i.resp = LEGACY_OWNERS[i.resp] || i.resp; });
     if (o.me && user(o.me) && user(o.me).activo) S.me = o.me;
+    if (Array.isArray(o.vacs)) S.vacs = o.vacs;
+    if (Array.isArray(o.avisos)) S.avisos = o.avisos.map(a => Object.assign(a, { f: new Date(a.f) }));
+    S.clients = S.clients.filter(c => !c.provisional);   // lead abierto y no reportado: no se queda guardado
     uid = Math.max(uid, +o.uid || 0);
     LAST_SAVE = new Date(o.savedAt);
     return true;
