@@ -1,6 +1,6 @@
-# Alfa CRM · demostración
+# α CRM · demostración
 
-Prototipo navegable de **Alfa CRM**, el CRM comercial del concesionario, para que el equipo lo pruebe y opine.
+Prototipo navegable de **α CRM**, el CRM comercial del concesionario, para que el equipo lo pruebe y opine.
 
 **Ábrelo aquí:** https://luistogo.github.io/alfa-crm-demo/
 
