@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>Alfa CRM</title>
+<title>α CRM</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%230d5f68%22%2F%3E%3Cg%20transform%3D%22translate(2.4%203.7)%20scale(1.033)%22%3E%3Cpath%20d%3D%22M19.3%205.4C18.1%2011.2%2015.9%2018.3%2010.4%2018.3%207%2018.3%204.8%2015.6%204.8%2012%204.8%208.4%207%205.7%2010.4%205.7c4.2%200%205.5%204.5%206.7%208.4.7%202.4%201.5%204.2%203.4%204.2h1.1%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222.5%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap">
@@ -60,7 +61,9 @@ button { cursor: pointer; }
 .app { height: 100%; display: grid; grid-template-columns: 236px minmax(0, 1fr); }
 .side { background: var(--side); color: var(--side-ink); display: flex; flex-direction: column; gap: 18px; padding-block: 20px 16px; padding-left: max(14px, env(safe-area-inset-left, 0px)); padding-right: 14px; }
 .brand { display: flex; flex-direction: column; gap: 2px; padding: 0 8px; }
-.brand b { font-family: var(--f-display); font-size: 1.7rem; line-height: 1; color: var(--side-ink); }
+.brand b { display: inline-flex; align-items: center; gap: 8px; line-height: 1; color: var(--side-ink); }
+.brand b svg { color: #4fb3bd; }
+.brand b .crm { font-family: var(--f-body); font-weight: 700; font-size: 1.25rem; letter-spacing: .06em; color: var(--side-ink); }
 .brand span { font-size: 13px; color: var(--side-muted); }
 .navs { display: flex; flex-direction: column; gap: 4px; flex: 1; }
 .tab { background: none; border: 0; border-radius: 10px; padding: 10px; display: flex; align-items: center; gap: 10px; font-size: 15.5px; color: var(--side-ink); text-align: left; position: relative; }
@@ -410,7 +413,7 @@ a.btn { text-decoration: none; color: inherit; }
 <body>
 <div class="app">
   <nav class="side" aria-label="Secciones">
-    <div class="brand"><b>Alfa CRM</b><span>Prototipo · datos ficticios</span></div>
+    <div class="brand"><b role="img" aria-label="α CRM"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.3 5.4C18.1 11.2 15.9 18.3 10.4 18.3 7 18.3 4.8 15.6 4.8 12 4.8 8.4 7 5.7 10.4 5.7c4.2 0 5.5 4.5 6.7 8.4.7 2.4 1.5 4.2 3.4 4.2h1.1" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linejoin="round"/></svg><span class="crm">CRM</span></b><span>Prototipo · datos ficticios</span></div>
     <div class="navs" id="tabs"></div>
     <div class="who" id="who"></div>
   </nav>
@@ -1311,7 +1314,7 @@ function parseVcf(text) {
 }
 function parseJson(text) {
   const o = JSON.parse(text);
-  if (o && o.app === 'Alfa CRM' && Array.isArray(o.clientes)) return { backup: o };
+  if (o && (o.app === 'α CRM' || o.app === 'Alfa CRM') && Array.isArray(o.clientes)) return { backup: o };
   let arr = Array.isArray(o) ? o : (o && (o.clientes || o.contacts || o.contactos || o.data || o.rows || Object.values(o).find(Array.isArray)));
   if (!Array.isArray(arr) || !arr.length) throw new Error('El JSON no contiene una lista de clientes.');
   if (Array.isArray(arr[0])) return { rows: arr.map(r => r.map(v => v == null ? '' : String(v))) };
@@ -1502,7 +1505,7 @@ function clientRow(c) {
 function agendaRow(i) { const c = i.cid ? client(i.cid) : null; return { 'Fecha': isoDay(i.f), 'Hora': hm(i.f), 'Duración (min)': i.dur || 30, 'Tipo': TYPES[i.tipo].l, 'Cliente': itemWho(i), 'Teléfono': c ? telOf(c) : (i.tel || ''), 'Estado del cliente': c ? stLabel(c.estado) : '', 'Nota': i.nota || '', 'Vencida': isLate(i) ? 'Sí' : 'No' }; }
 function doExport() {
   const e = S.exp, stamp = isoDay(now());
-  if (e.what === 'copia') { saveFile('alfa-crm-copia-' + stamp + '.json', JSON.stringify({ app: 'Alfa CRM', version: 1, exportado: new Date().toISOString(), clientes: S.clients, agenda: S.items, leads: S.leads, usuarios: S.users }, null, 2), 'application/json'); return; }
+  if (e.what === 'copia') { saveFile('alfa-crm-copia-' + stamp + '.json', JSON.stringify({ app: 'α CRM', version: 1, exportado: new Date().toISOString(), clientes: S.clients, agenda: S.items, leads: S.leads, usuarios: S.users }, null, 2), 'application/json'); return; }
   const rows = e.what === 'agenda' ? S.items.filter(i => !i.done && mineItem(i)).sort((a, b) => a.f - b.f).map(agendaRow) : exportClients().map(clientRow);
   if (!rows.length) { toast('No hay nada que exportar con ese filtro'); return; }
   const base = 'alfa-crm-' + (e.what === 'agenda' ? 'agenda' : 'clientes') + '-' + stamp;
@@ -1537,12 +1540,12 @@ function vImport() {
     h += (imp.err ? '<div class="alert">' + ic('alert') + '<div class="tx"><b>No se ha podido leer el archivo</b><span>' + esc(imp.err) + '</span></div></div>' : '') +
       '<label class="drop" for="imp-file" id="drop">' + ic('upload', 34) + '<b>Arrastra aquí tu archivo o pulsa para elegirlo</b><span class="meta">Excel (.xlsx, .xls), LibreOffice (.ods), CSV o TXT de cualquier programa, JSON, contactos del móvil, Google u Outlook (.vcf)</span><input type="file" id="imp-file" accept=".csv,.txt,.tsv,.xlsx,.xls,.xlsm,.ods,.json,.vcf" hidden></label>' +
       '<div class="cols2"><div class="panel stack"><h3 class="sec">O pega los datos</h3><p class="meta" style="margin:0">Copia las filas en Excel o Google Sheets (con la fila de títulos) y pégalas aquí.</p><textarea id="imp-paste" data-in="p.paste" rows="6" placeholder="Nombre&#9;Teléfono&#9;Email…">' + esc(imp.paste) + '</textarea><div><button class="btn pri" data-act="ipaste" type="button">Leer los datos pegados</button></div></div>' +
-      '<div class="panel stack"><h3 class="sec">Consejos</h3><ul class="tips"><li>No hace falta preparar el archivo: reconozco las columnas por su nombre (Nombre, Apellidos, Móvil, Teléfono, Email, DNI, Dirección, CP…) y podrás corregirlas.</li><li>Antes de importar verás los duplicados y los errores, fila por fila.</li><li>Si el archivo no trae columna de RGPD, los clientes entran como <b>pendientes de confirmar</b>, sin permiso de contacto comercial.</li><li>Para restaurar una copia completa de Alfa CRM, importa su archivo JSON.</li></ul><div><button class="btn" data-act="plantilla" type="button">' + ic('download', 18) + 'Descargar plantilla (CSV)</button></div></div></div>';
+      '<div class="panel stack"><h3 class="sec">Consejos</h3><ul class="tips"><li>No hace falta preparar el archivo: reconozco las columnas por su nombre (Nombre, Apellidos, Móvil, Teléfono, Email, DNI, Dirección, CP…) y podrás corregirlas.</li><li>Antes de importar verás los duplicados y los errores, fila por fila.</li><li>Si el archivo no trae columna de RGPD, los clientes entran como <b>pendientes de confirmar</b>, sin permiso de contacto comercial.</li><li>Para restaurar una copia completa de α CRM, importa su archivo JSON.</li></ul><div><button class="btn" data-act="plantilla" type="button">' + ic('download', 18) + 'Descargar plantilla (CSV)</button></div></div></div>';
     return h;
   }
   if (imp.step === 'copia') {
     const b = imp.backup;
-    h += '<div class="panel stack"><h3 class="sec">Copia completa de Alfa CRM</h3><p style="margin:0"><b>' + esc(imp.file) + '</b> · exportada el ' + esc(String(b.exportado || '').slice(0, 10)) + ' · ' + b.clientes.length + ' clientes, ' + (b.agenda || []).length + ' citas, ' + (b.leads || []).length + ' leads.</p>' +
+    h += '<div class="panel stack"><h3 class="sec">Copia completa de α CRM</h3><p style="margin:0"><b>' + esc(imp.file) + '</b> · exportada el ' + esc(String(b.exportado || '').slice(0, 10)) + ' · ' + b.clientes.length + ' clientes, ' + (b.agenda || []).length + ' citas, ' + (b.leads || []).length + ' leads.</p>' +
       '<div class="chips"><button class="btn pri" data-act="bmerge" type="button">Añadir los clientes que no existan</button>' + (imp.confirmReplace ? '<button class="btn danger" data-act="breplace" type="button">Sí, sustituir todos los datos actuales</button><button class="btn" data-act="bnoreplace" type="button">No</button>' : '<button class="btn" data-act="baskreplace" type="button">Sustituir todos los datos por la copia</button>') + '</div>' +
       '<div><button class="btn sm" data-act="ireset" type="button">Elegir otro archivo</button></div></div>';
     return h;
@@ -1555,7 +1558,7 @@ function vImport() {
       (imp.wb && imp.wb.SheetNames.length > 1 ? '<div class="fld"><label for="o-sheet">Hoja</label><select id="o-sheet" data-in="o.sheet">' + opts(imp.wb.SheetNames, imp.sheet) + '</select></div>' : '') +
       '<label class="sw" for="o-hh">La primera fila tiene los títulos<input type="checkbox" id="o-hh" data-in="o.hasHeader"' + (imp.hasHeader ? ' checked' : '') + '></label></div>' +
       (dupT.length ? '<div class="alert warn">' + ic('alert') + '<div class="tx">Hay columnas asignadas al mismo campo (' + dupT.map(fieldLabel).join(', ') + '): solo se usará la primera que tenga valor.</div></div>' : '') +
-      '<div class="tbl"><table><thead><tr><th>Columna del archivo</th><th>Ejemplos</th><th>Campo en Alfa CRM</th></tr></thead><tbody>' +
+      '<div class="tbl"><table><thead><tr><th>Columna del archivo</th><th>Ejemplos</th><th>Campo en α CRM</th></tr></thead><tbody>' +
       imp.headers.map((hd, i) => '<tr><td><b>' + esc(hd) + '</b></td><td class="wrap meta">' + (sample(i) || '<i>vacía</i>') + '</td><td><select id="m-' + i + '" data-in="m.' + i + '" class="' + (imp.map[i] ? 'mapped' : '') + '" aria-label="Campo para ' + esc(hd) + '">' + FIELDS.map(f => '<option value="' + f[0] + '"' + (f[0] === imp.map[i] ? ' selected' : '') + '>' + esc(f[1]) + '</option>').join('') + '</select></td></tr>').join('') +
       '</tbody></table></div></div>';
     const o = imp.opts;
@@ -1593,7 +1596,7 @@ function vImport() {
 function vExport() {
   const e = S.exp, cnt = e.what === 'clientes' ? exportClients().length : e.what === 'agenda' ? S.items.filter(i => !i.done && mineItem(i)).length : S.clients.length;
   const card = (v, t, d) => '<button class="pick' + (e.what === v ? ' on' : '') + '" data-act="xwhat" data-v="' + v + '" type="button"><span><b>' + t + '</b><small>' + d + '</small></span></button>';
-  let h = '<div class="cols2"><div class="stack"><h3 class="sec">Qué exportar</h3>' + card('clientes', 'Clientes', 'Una fila por cliente, con sus datos, origen, RGPD y próxima acción.') + card('agenda', 'Agenda', 'Citas y llamadas pendientes, con fecha, hora y cliente.') + card('copia', 'Copia completa', 'Todo Alfa CRM en un archivo JSON que se puede volver a importar.') + '</div><div class="stack">';
+  let h = '<div class="cols2"><div class="stack"><h3 class="sec">Qué exportar</h3>' + card('clientes', 'Clientes', 'Una fila por cliente, con sus datos, origen, RGPD y próxima acción.') + card('agenda', 'Agenda', 'Citas y llamadas pendientes, con fecha, hora y cliente.') + card('copia', 'Copia completa', 'Todo α CRM en un archivo JSON que se puede volver a importar.') + '</div><div class="stack">';
   if (e.what !== 'copia') {
     h += '<h3 class="sec">Formato</h3><div class="chips">' + [['xlsx', 'Excel (.xlsx)'], ['csv', 'CSV (.csv)'], ['json', 'JSON (.json)']].map(f => '<button class="chip' + (e.fmt === f[0] ? ' on' : '') + '" data-act="xfmt" data-v="' + f[0] + '" type="button">' + f[1] + '</button>').join('') + '</div>' +
       '<p class="meta" style="margin:0">' + (e.fmt === 'csv' ? 'Separado por punto y coma y en UTF-8, para que Excel en español lo abra con las tildes bien.' : e.fmt === 'json' ? 'Para otros programas o integraciones.' : 'Se abre directamente en Excel, Google Sheets o LibreOffice.') + '</p>';
@@ -1950,7 +1953,7 @@ function userSheetHtml() {
     if (!f.uactivo && nCl) body += '<div class="fld"><label for="u-reas">Sus ' + nCl + ' clientes pasan a *</label><select id="u-reas" data-in="s.ureasig"><option value="">Elige un usuario</option>' + activeUsers().filter(x => x.id !== u.id).map(x => '<option value="' + esc(x.id) + '"' + (f.ureasig === x.id ? ' selected' : '') + '>' + esc(x.nombre) + '</option>').join('') + '</select></div>';
   }
   const foot = '<button class="btn" data-act="sclose" type="button">Cancelar</button><button class="btn pri" data-act="usave" type="button">' + (u ? 'Guardar cambios' : 'Crear usuario') + '</button>';
-  return sheetFrame(u ? 'Editar usuario' : 'Nuevo usuario', u ? u.nombre : 'Alta en Alfa CRM', body, foot);
+  return sheetFrame(u ? 'Editar usuario' : 'Nuevo usuario', u ? u.nombre : 'Alta en α CRM', body, foot);
 }
 function saveUser() {
   const sh = S.sheet, f = sh.f, u = sh.uid ? user(sh.uid) : null, yo = me();
@@ -2360,8 +2363,8 @@ const saveCfg = () => { try { localStorage.setItem('alfacrm-ajustes', JSON.strin
 const EMBEDDED = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
 const FILEMODE = (() => { try { return window.location.protocol === 'file:'; } catch (e) { return false; } })();
 // Motivo por el que el navegador no deja dictar aquí, o '' si el sitio es válido
-const micBlockReason = () => EMBEDDED ? 'Estás viendo Alfa CRM dentro de Claude (página publicada o vista previa del archivo): ahí el micrófono está bloqueado siempre.'
-  : FILEMODE ? 'Has abierto Alfa CRM como archivo del ordenador (la dirección empieza por file://): Chrome y Edge no permiten el dictado por voz en archivos, solo en direcciones web (https).' : '';
+const micBlockReason = () => EMBEDDED ? 'Estás viendo α CRM dentro de Claude (página publicada o vista previa del archivo): ahí el micrófono está bloqueado siempre.'
+  : FILEMODE ? 'Has abierto α CRM como archivo del ordenador (la dirección empieza por file://): Chrome y Edge no permiten el dictado por voz en archivos, solo en direcciones web (https).' : '';
 const LANGS = [['es-ES', 'Español (España)'], ['ca-ES', 'Català'], ['gl-ES', 'Galego'], ['eu-ES', 'Euskara'], ['en-GB', 'English']];
 let MICPERM = 'desconocido';
 async function refreshMicPerm() {
@@ -2422,7 +2425,7 @@ function vAjustes() {
     '<p class="meta" id="cptest-res" style="margin:0;' + (CP_TEST.msg ? 'color:var(--' + (CP_TEST.ok ? 'good' : 'bad') + ')' : '') + '" role="status">' + esc(CP_TEST.msg) + '</p></div>';
   h += '<div class="panel stack"><h3 class="sec">Micrófono</h3>' +
     '<div class="toolbar"><span class="sla ' + est[0] + '" style="font-size:13px">' + est[1] + '</span><span>' + esc(est[2]) + '</span></div>' +
-    (micBlockReason() ? '<div class="alert">' + ic('alert') + '<div class="tx"><b>Aquí el dictado del navegador no puede funcionar</b><span>' + esc(micBlockReason()) + '</span><span>Para dictar ahora mismo: pon el cursor en un campo y pulsa <b>Win + H</b> (Windows) o usa el micrófono del teclado del móvil. Para el botón de micrófono de Alfa CRM hace falta abrirlo desde una dirección web <b>https://</b>.</span></div></div>' : '') +
+    (micBlockReason() ? '<div class="alert">' + ic('alert') + '<div class="tx"><b>Aquí el dictado del navegador no puede funcionar</b><span>' + esc(micBlockReason()) + '</span><span>Para dictar ahora mismo: pon el cursor en un campo y pulsa <b>Win + H</b> (Windows) o usa el micrófono del teclado del móvil. Para el botón de micrófono de α CRM hace falta abrirlo desde una dirección web <b>https://</b>.</span></div></div>' : '') +
     '<div class="chips"><button class="btn pri" data-act="askmic" type="button">' + ic('mic', 18) + 'Dar permiso al micrófono</button><button class="btn" data-act="micperm" type="button">Volver a comprobar</button></div>' +
     '<p class="meta" style="margin:0">Dictado por voz en este navegador: <b>' + (SR ? 'disponible' : 'no disponible (usa Chrome o Edge)') + '</b></p></div>';
   h += '<div class="panel stack"><h3 class="sec">Dictado por voz</h3>' +
